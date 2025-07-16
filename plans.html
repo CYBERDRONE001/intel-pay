@@ -1,1 +1,62 @@
 <!-- plans.html will be replaced with actual implementation -->
+<!-- plans.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Choose Mining Plan – IntelPay</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-6">
+  <h2 class="text-3xl font-bold text-center mb-8">Select a Mining Plan</h2>
+
+  <div class="grid md:grid-cols-3 gap-6">
+    <div class="bg-gray-800 p-4 rounded shadow">
+      <img src="https://i.imgur.com/M7Qd3ZE.jpg" class="rounded mb-3" alt="Starter Rig">
+      <h3 class="text-xl font-semibold">Starter</h3>
+      <p>₦5,500 • 4% Daily • 30 Days</p>
+      <button onclick="selectPlan('starter')" class="mt-4 bg-green-600 px-4 py-2 rounded w-full">Select</button>
+    </div>
+    <div class="bg-gray-800 p-4 rounded shadow">
+      <img src="https://i.imgur.com/XUPgjcw.jpg" class="rounded mb-3" alt="Pro Miner">
+      <h3 class="text-xl font-semibold">Pro Miner</h3>
+      <p>₦15,000 • 5% Daily • 40 Days</p>
+      <button onclick="selectPlan('pro')" class="mt-4 bg-blue-600 px-4 py-2 rounded w-full">Select</button>
+    </div>
+    <div class="bg-gray-800 p-4 rounded shadow">
+      <img src="https://i.imgur.com/Bj3PP3N.jpg" class="rounded mb-3" alt="Elite Rig">
+      <h3 class="text-xl font-semibold">Elite Rig</h3>
+      <p>₦50,000 • 7% Daily • 60 Days</p>
+      <button onclick="selectPlan('elite')" class="mt-4 bg-red-600 px-4 py-2 rounded w-full">Select</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db } from './firebase-config.js';
+    import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const plans = {
+      starter: { name: "Starter", rate: 0.04, days: 30, image: "https://i.imgur.com/M7Qd3ZE.jpg", amount: 5500 },
+      pro:     { name: "Pro Miner", rate: 0.05, days: 40, image: "https://i.imgur.com/XUPgjcw.jpg", amount: 15000 },
+      elite:   { name: "Elite Rig", rate: 0.07, days: 60, image: "https://i.imgur.com/Bj3PP3N.jpg", amount: 50000 }
+    };
+
+    window.selectPlan = async (key) => {
+      const user = auth.currentUser;
+      const plan = plans[key];
+      if (!user) return alert("Please login first.");
+
+      await updateDoc(doc(db, "users", user.uid), {
+        miningPlan: key,
+        earningsRate: plan.rate,
+        miningImage: plan.image,
+        duration: plan.days,
+        initialAmount: plan.amount
+      });
+
+      alert(`${plan.name} plan selected! Continue to payment.`);
+      location.href = "payment.html";
+    };
+  </script>
+</body>
+</html>
