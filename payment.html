@@ -1,1 +1,32 @@
 <!-- payment.html will be replaced with actual implementation -->
+<!-- payment.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payment – IntelPay</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+  <script src="https://checkout.flutterwave.com/v3.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-gray-900 text-white p-6 min-h-screen">
+  <h2 class="text-2xl font-bold mb-6">Choose Your Payment Method</h2>
+
+  <div class="space-y-4 max-w-xl">
+    <button id="paystackBtn" class="w-full bg-blue-600 p-4 rounded">Pay with Paystack</button>
+    <button id="flutterwaveBtn" class="w-full bg-purple-600 p-4 rounded">Pay with Flutterwave</button>
+
+    <div class="bg-gray-800 p-4 rounded mt-6">
+      <h3 class="text-lg font-semibold mb-2">Crypto Payment</h3>
+      <p>Send payment to: <span class="text-green-400">bc1q-your-wallet-address</span></p>
+      <p>Upload your screenshot to <a href="https://imgbb.com" class="underline text-blue-400" target="_blank">imgbb.com</a> and paste the link:</p>
+      <input type="url" id="cryptoLink" placeholder="https://ibb.co/your-image" class="w-full p-2 mt-2 bg-gray-700 rounded" />
+      <button id="submitLink" class="mt-3 bg-green-600 p-2 rounded">Submit Screenshot</button>
+      <p class="text-green-400 mt-2 hidden" id="linkSaved">✅ Link submitted. Admin will verify.</p>
+    </div>
+  </div>
+
+  <script type="module" src="payment.js"></script>
+</body>
+</html>
