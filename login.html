@@ -1,11 +1,10 @@
 <!-- login.html will be replaced with actual implementation -->
-<!-- login.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Login – IntelPay</title>
-  <script src="="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-900 text-white h-screen flex items-center justify-center">
   <form id="loginForm" class="bg-gray-800 p-6 rounded w-full max-w-md space-y-4">
@@ -17,71 +16,42 @@
   </form>
 
   <script type="module">
-    <!-- auth.js will be replaced with actual implementation -->
-// auth.js (DEBUG VERSION)
-import { auth, db } from './firebase-config.js';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  updateProfile
-} from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-const regForm = document.getElementById('registerForm');
-const logForm = document.getElementById('loginForm');
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
+      authDomain: "intel-pay-ltd.firebaseapp.com",
+      projectId: "intel-pay-ltd",
+      storageBucket: "intel-pay-ltd.appspot.com",
+      messagingSenderId: "779411397815",
+      appId: "1:779411397815:web:7b6d9f34572d13a833c132"
+    };
 
-// Register
-if (regForm) {
-  regForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const name = regForm.name.value;
-    const email = regForm.email.value;
-    const password = regForm.password.value;
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(cred.user, { displayName: name });
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = e.target.email.value;
+      const password = e.target.password.value;
 
-      await setDoc(doc(db, "users", cred.user.uid), {
-        name,
-        email,
-        activated: false,
-        earnings: 0,
-        admin: false
-      });
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
+        const data = snap.data();
 
-      alert("Registration successful. Redirecting...");
-      location.href = "plans.html";
-    } catch (err) {
-      alert("Registration Error: " + err.message);
-      console.error("REGISTRATION ERROR:", err);
-    }
-  });
-}
-
-// Login
-if (logForm) {
-  logForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = logForm.email.value;
-    const password = logForm.password.value;
-
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
-      const data = snap.data();
-
-      if (data.admin === true) {
-        location.href = "admin-dashboard.html";
-      } else {
-        location.href = "dashboard.html";
+        if (data.admin === true) {
+          location.href = "admin-dashboard.html";
+        } else {
+          location.href = "dashboard.html";
+        }
+      } catch (err) {
+        alert("Login failed: " + err.message);
       }
-    } catch (err) {
-      alert("Login Error: " + err.message);
-      console.error("LOGIN ERROR:", err);
-    }
-  });
-  }
-                                       </script>
+    });
+  </script>
 </body>
 </html>
