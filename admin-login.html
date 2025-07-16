@@ -1,1 +1,43 @@
 <!-- admin-login.html will be replaced with actual implementation -->
+<!-- admin-login.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Login – IntelPay</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white h-screen flex justify-center items-center">
+  <form id="adminLoginForm" class="bg-gray-800 p-6 rounded w-full max-w-md space-y-4">
+    <h2 class="text-2xl font-bold text-center">Admin Login</h2>
+    <input type="email" id="email" placeholder="Admin Email" required class="w-full p-2 bg-gray-700 rounded" />
+    <input type="password" id="password" placeholder="Password" required class="w-full p-2 bg-gray-700 rounded" />
+    <button type="submit" class="w-full bg-blue-600 p-2 rounded">Login</button>
+  </form>
+
+  <script type="module">
+    import { auth, db } from './firebase-config.js';
+    import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    document.getElementById("adminLoginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = e.target.email.value;
+      const password = e.target.password.value;
+
+      try {
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        const snap = await getDoc(doc(db, "users", cred.user.uid));
+        if (snap.exists() && snap.data().admin === true) {
+          localStorage.setItem("adminLoggedIn", "true");
+          location.href = "admin.html";
+        } else {
+          alert("You are not an admin.");
+        }
+      } catch (err) {
+        alert("Login failed. Check your credentials.");
+      }
+    });
+  </script>
+</body>
+</html>
