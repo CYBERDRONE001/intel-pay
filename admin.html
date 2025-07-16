@@ -1,1 +1,30 @@
 <!-- admin.html will be replaced with actual implementation -->
+<!-- admin.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Panel – IntelPay</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-6 min-h-screen">
+  <h1 class="text-3xl font-bold mb-6">Admin Panel</h1>
+
+  <table class="min-w-full bg-gray-800 text-sm">
+    <thead class="bg-gray-700">
+      <tr>
+        <th class="p-2">Name</th>
+        <th class="p-2">Email</th>
+        <th class="p-2">Plan</th>
+        <th class="p-2">Earnings</th>
+        <th class="p-2">Proof</th>
+        <th class="p-2">Status</th>
+        <th class="p-2">Action</th>
+      </tr>
+    </thead>
+    <tbody id="userTable" class="text-center"></tbody>
+  </table>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>
