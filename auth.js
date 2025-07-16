@@ -1,5 +1,5 @@
 <!-- auth.js will be replaced with actual implementation -->
-// auth.js
+// auth.js (DEBUG VERSION)
 import { auth, db } from './firebase-config.js';
 import {
   createUserWithEmailAndPassword,
@@ -11,7 +11,7 @@ import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/fi
 const regForm = document.getElementById('registerForm');
 const logForm = document.getElementById('loginForm');
 
-// Registration
+// Register
 if (regForm) {
   regForm.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -28,13 +28,14 @@ if (regForm) {
         email,
         activated: false,
         earnings: 0,
-        admin: false // Default user
+        admin: false
       });
 
-      alert("Registered successfully!");
+      alert("Registration successful. Redirecting...");
       location.href = "plans.html";
     } catch (err) {
-      alert(err.message);
+      alert("Registration Error: " + err.message);
+      console.error("REGISTRATION ERROR:", err);
     }
   });
 }
@@ -48,8 +49,8 @@ if (logForm) {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      const userSnap = await getDoc(doc(db, "users", auth.currentUser.uid));
-      const data = userSnap.data();
+      const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
+      const data = snap.data();
 
       if (data.admin === true) {
         location.href = "admin-dashboard.html";
@@ -57,7 +58,8 @@ if (logForm) {
         location.href = "dashboard.html";
       }
     } catch (err) {
-      alert("Login failed: " + err.message);
+      alert("Login Error: " + err.message);
+      console.error("LOGIN ERROR:", err);
     }
   });
-        }
+}
