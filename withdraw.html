@@ -1,9 +1,7 @@
-<!-- withdraw.html will be replaced with actual implementation -->
-<!-- withdraw.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Withdraw – IntelPay</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -17,6 +15,84 @@
     <button type="submit" class="w-full bg-green-600 p-2 rounded">Submit</button>
   </form>
 
-  <script type="module" src="withdraw.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
+      authDomain: "intel-pay-ltd.firebaseapp.com",
+      projectId: "intel-pay-ltd",
+      storageBucket: "intel-pay-ltd.appspot.com",
+      messagingSenderId: "779411397815",
+      appId: "1:779411397815:web:7b6d9f34572d13a833c132"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let userData = null;
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return location.href = "login.html";
+      currentUser = user;
+      const snap = await getDoc(doc(db, "users", user.uid));
+      userData = snap.data();
+    });
+
+    document.getElementById("withdrawForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const accountName = e.target.accountName.value;
+      const bankName = e.target.bankName.value;
+      const accountNumber = e.target.accountNumber.value;
+
+      const amount = Math.min(userData.earnings || 0, 5500);
+      if (amount < 1000) return alert("You must earn at least ₦1000 to withdraw.");
+
+      // Store in Firestore
+      await setDoc(doc(db, "withdrawals", `${currentUser.uid}_${Date.now()}`), {
+        userId: currentUser.uid,
+        name: accountName,
+        bank: bankName,
+        number: accountNumber,
+        amount,
+        status: "pending",
+        createdAt: serverTimestamp()
+      });
+
+      // Send Email (via FormSubmit)
+      const emailForm = document.createElement("form");
+      emailForm.action = "https://formsubmit.co/YOUR_EMAIL@example.com"; // ✅ Replace
+      emailForm.method = "POST";
+      emailForm.style.display = "none";
+
+      const inputs = {
+        "Account Name": accountName,
+        "Bank Name": bankName,
+        "Account Number": accountNumber,
+        "User Email": currentUser.email,
+        "Amount": `₦${amount}`,
+        "_captcha": "false",
+        "_subject": "New IntelPay Withdrawal Request"
+      };
+
+      for (const key in inputs) {
+        const input = document.createElement("input");
+        input.name = key;
+        input.value = inputs[key];
+        emailForm.appendChild(input);
+      }
+
+      document.body.appendChild(emailForm);
+      emailForm.submit();
+
+      alert("Withdrawal request submitted! We’ll contact you soon.");
+      location.href = "dashboard.html";
+    });
+  </script>
 </body>
 </html>
