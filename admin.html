@@ -46,4 +46,49 @@
     onAuthStateChanged(auth, async (user) => {
       if (!user) return location.href = "admin-login.html";
       const adminSnap = await getDocs(collection(db, "users"));
-      const thisUser = (await getDocs(collection(db, "users"))).docs.find(d => d.id === user.uid
+      const thisUser = (await getDocs(collection(db, "users"))).docs.find(d => d.id === user.uid);
+      if (!thisUser || thisUser.data().admin !== true) {
+        alert("You are not authorized to view this page.");
+        location.href = "login.html";
+      } else {
+        loadUsers();
+      }
+    });
+
+    async function loadUsers() {
+      const snap = await getDocs(collection(db, "users"));
+      let html = "";
+
+      snap.forEach(d => {
+        const data = d.data();
+        html += `
+          <tr class="border-t border-gray-600">
+            <td class="p-2">${data.name || "-"}</td>
+            <td class="p-2">${data.email}</td>
+            <td class="p-2">${data.miningPlan?.toUpperCase() || "—"}</td>
+            <td class="p-2">₦${data.earnings?.toFixed(2) || 0}</td>
+            <td class="p-2">
+              ${data.cryptoPaymentProof ? `<a href="${data.cryptoPaymentProof}" class="text-blue-400" target="_blank">View</a>` : "—"}
+            </td>
+            <td class="p-2">${data.activated ? "✅" : "❌"}</td>
+            <td class="p-2">
+              ${!data.activated ? `<button class="bg-green-600 px-2 py-1 rounded text-sm" onclick="activate('${d.id}')">Activate</button>` : ""}
+            </td>
+          </tr>
+        `;
+      });
+
+      table.innerHTML = html;
+    }
+
+    window.activate = async (id) => {
+      await updateDoc(doc(db, "users", id), {
+        activated: true,
+        activatedAt: new Date()
+      });
+      alert("User activated!");
+      loadUsers();
+    };
+  </script>
+</body>
+</html>
