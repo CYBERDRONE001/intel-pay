@@ -1,5 +1,3 @@
-<!-- plans.html will be replaced with actual implementation -->
-<!-- plans.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -32,8 +30,29 @@
   </div>
 
   <script type="module">
-    import { auth, db } from './firebase-config.js';
-    import { doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
+      authDomain: "intel-pay-ltd.firebaseapp.com",
+      projectId: "intel-pay-ltd",
+      storageBucket: "intel-pay-ltd.appspot.com",
+      messagingSenderId: "779411397815",
+      appId: "1:779411397815:web:7b6d9f34572d13a833c132"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) return location.href = "login.html";
+      currentUser = user;
+    });
 
     const plans = {
       starter: { name: "Starter", rate: 0.04, days: 30, image: "https://i.imgur.com/M7Qd3ZE.jpg", amount: 5500 },
@@ -42,11 +61,10 @@
     };
 
     window.selectPlan = async (key) => {
-      const user = auth.currentUser;
+      if (!currentUser) return alert("Please login first.");
       const plan = plans[key];
-      if (!user) return alert("Please login first.");
 
-      await updateDoc(doc(db, "users", user.uid), {
+      await updateDoc(doc(db, "users", currentUser.uid), {
         miningPlan: key,
         earningsRate: plan.rate,
         miningImage: plan.image,
