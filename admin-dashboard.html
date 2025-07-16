@@ -1,4 +1,3 @@
-<!-- admin-dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -33,7 +32,89 @@
     <button id="exportBtn" class="bg-blue-600 px-4 py-2 rounded">Export Users to CSV</button>
   </div>
 
-  <script type="module" src="admin-dashboard.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getFirestore, getDocs, collection } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
+      authDomain: "intel-pay-ltd.firebaseapp.com",
+      projectId: "intel-pay-ltd",
+      storageBucket: "intel-pay-ltd.appspot.com",
+      messagingSenderId: "779411397815",
+      appId: "1:779411397815:web:7b6d9f34572d13a833c132"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let totalUsers = 0;
+    let totalEarnings = 0;
+    let totalWithdrawals = 0;
+    let chartData = [];
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return location.href = "admin-login.html";
+      const snap = await getDocs(collection(db, "users"));
+      const admin = snap.docs.find(d => d.id === user.uid);
+      if (!admin || admin.data().admin !== true) {
+        alert("Not authorized");
+        location.href = "login.html";
+        return;
+      }
+
+      loadData();
+    });
+
+    async function loadData() {
+      const users = await getDocs(collection(db, "users"));
+      totalUsers = users.size;
+      users.forEach(doc => {
+        const d = doc.data();
+        totalEarnings += d.earnings || 0;
+        chartData.push(d.earnings || 0);
+      });
+
+      const withdrawals = await getDocs(collection(db, "withdrawals"));
+      withdrawals.forEach(doc => {
+        const w = doc.data();
+        totalWithdrawals += w.amount || 0;
+      });
+
+      document.getElementById("userCount").textContent = totalUsers;
+      document.getElementById("totalEarnings").textContent = `₦${totalEarnings.toLocaleString()}`;
+      document.getElementById("totalWithdrawals").textContent = `₦${totalWithdrawals.toLocaleString()}`;
+
+      new Chart(document.getElementById('earningsChart'), {
+        type: 'bar',
+        data: {
+          labels: chartData.map((_, i) => `User ${i + 1}`),
+          datasets: [{
+            label: 'Earnings',
+            data: chartData,
+            backgroundColor: 'rgba(59, 130, 246, 0.6)'
+          }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    document.getElementById("exportBtn").addEventListener("click", async () => {
+      const snap = await getDocs(collection(db, "users"));
+      let csv = "Name,Email,Earnings,Plan\n";
+      snap.forEach(doc => {
+        const d = doc.data();
+        csv += `${d.name || '-'},${d.email},${d.earnings || 0},${d.miningPlan || '—'}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "intelpay_users.csv";
+      link.click();
+    });
+  </script>
 </body>
 </html>
-<!-- admin-dashboard.html will be replaced with actual implementation -->
