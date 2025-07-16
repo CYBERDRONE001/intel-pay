@@ -1,1 +1,39 @@
+<!-- admin-dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Analytics – IntelPay</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-900 text-white p-6 min-h-screen">
+  <h1 class="text-3xl font-bold mb-6">Analytics Dashboard</h1>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-gray-800 p-4 rounded">
+      <p>Total Users</p>
+      <h2 class="text-2xl font-bold" id="userCount">0</h2>
+    </div>
+    <div class="bg-gray-800 p-4 rounded">
+      <p>Total Earnings</p>
+      <h2 class="text-2xl font-bold" id="totalEarnings">₦0</h2>
+    </div>
+    <div class="bg-gray-800 p-4 rounded">
+      <p>Total Withdrawals</p>
+      <h2 class="text-2xl font-bold" id="totalWithdrawals">₦0</h2>
+    </div>
+  </div>
+
+  <div class="bg-gray-800 p-4 rounded mb-6">
+    <canvas id="earningsChart" height="150"></canvas>
+  </div>
+
+  <div class="text-center">
+    <button id="exportBtn" class="bg-blue-600 px-4 py-2 rounded">Export Users to CSV</button>
+  </div>
+
+  <script type="module" src="admin-dashboard.js"></script>
+</body>
+</html>
 <!-- admin-dashboard.html will be replaced with actual implementation -->
