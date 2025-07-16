@@ -1,1 +1,60 @@
 <!-- chatbot.html will be replaced with actual implementation -->
+<!-- chatbot.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Support – IntelPay</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .chatbox { max-height: 70vh; overflow-y: auto; }
+  </style>
+</head>
+<body class="bg-gray-900 text-white p-6 min-h-screen flex flex-col">
+  <h2 class="text-2xl font-bold mb-4">IntelPay AI Chat Support</h2>
+
+  <div id="chat" class="chatbox bg-gray-800 p-4 rounded flex-1 mb-4 space-y-2"></div>
+
+  <div class="flex space-x-2">
+    <input type="text" id="msgInput" placeholder="Ask a question..." class="flex-1 p-2 rounded bg-gray-700" />
+    <button id="sendBtn" class="bg-blue-600 px-4 py-2 rounded">Send</button>
+  </div>
+
+  <script type="module">
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("msgInput");
+    const sendBtn = document.getElementById("sendBtn");
+
+    const apiKey = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"; // ✅ Replace with your OpenAI API key
+
+    async function askGPT(message) {
+      chat.innerHTML += `<div><strong>You:</strong> ${message}</div>`;
+      input.value = "";
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [{ role: "user", content: message }]
+        })
+      });
+      const data = await res.json();
+      const reply = data.choices?.[0]?.message?.content || "No response.";
+      chat.innerHTML += `<div><strong>AI:</strong> ${reply}</div>`;
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    sendBtn.addEventListener("click", () => {
+      const msg = input.value.trim();
+      if (msg) askGPT(msg);
+    });
+
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") sendBtn.click();
+    });
+  </script>
+</body>
+</html>
