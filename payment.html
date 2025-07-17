@@ -7,6 +7,12 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://js.paystack.co/v1/inline.js"></script>
   <script src="https://checkout.flutterwave.com/v3.js"></script>
+
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
 </head>
 <body class="bg-gray-900 text-white p-4">
 
@@ -41,19 +47,8 @@
     <div id="statusMsg" class="mt-4 text-sm text-center"></div>
   </div>
 
-  <!-- Firebase & Payment Logic -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import {
-      getFirestore, doc, setDoc
-    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-    import {
-      getStorage, ref, uploadBytes, getDownloadURL
-    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
-
+  <!-- Firebase + Payment Logic -->
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
       authDomain: "intel-pay-ltd.firebaseapp.com",
@@ -63,76 +58,89 @@
       appId: "1:779411397815:web:7b6d9f34572d13a833c132"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const storage = getStorage(app);
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
 
-    let currentUser;
-    const form = document.getElementById("screenshotForm");
-    const statusMsg = document.getElementById("statusMsg");
-
-    onAuthStateChanged(auth, (user) => {
-      if (!user) return window.location.href = "login.html";
-      currentUser = user;
-    });
-
-    form.addEventListener("submit", async (e) => {
+    // ✅ Handle Screenshot Upload
+    document.getElementById("screenshotForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const file = document.getElementById("screenshot").files[0];
-      if (!file || !currentUser) return;
+      const user = auth.currentUser;
 
-      const storageRef = ref(storage, `payments/${currentUser.uid}/${file.name}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
+      if (!user || !file) {
+        alert("❌ Please login and select a screenshot.");
+        return;
+      }
 
-      await setDoc(doc(db, "payments", currentUser.uid), {
+      const fileRef = storage.ref().child(`payments/${user.uid}/${file.name}`);
+      await fileRef.put(file);
+      const url = await fileRef.getDownloadURL();
+
+      await db.collection("payments").doc(user.uid).set({
         method: "crypto",
         status: "pending",
         proofURL: url,
         timestamp: Date.now()
       });
 
-      statusMsg.innerHTML = "✅ Screenshot uploaded! Admin will verify shortly.";
+      document.getElementById("statusMsg").innerText = "✅ Screenshot uploaded! Admin will verify shortly.";
     });
 
-    // PAYSTACK PAYMENT
-    window.payWithPaystack = () => {
+    // ✅ Paystack Payment
+    function payWithPaystack() {
+      const user = auth.currentUser;
+      if (!user) {
+        alert("❌ You must be logged in to make a payment.");
+        return;
+      }
+
       const handler = PaystackPop.setup({
-        key: "pk_live_725e9c0357625ec847ec27b37e4d1033ac90a718", // ✅ Your live key
-        email: currentUser.email,
-        amount: 550000, // ₦5500 in Kobo
+        key: "pk_live_725e9c0357625ec847ec27b37e4d1033ac90a718",
+        email: user.email,
+        amount: 550000,
         currency: "NGN",
-        callback: async function (response) {
-          await setDoc(doc(db, "payments", currentUser.uid), {
+        callback: function (response) {
+          db.collection("payments").doc(user.uid).set({
             method: "paystack",
             status: "success",
             ref: response.reference,
             timestamp: Date.now()
+          }).then(() => {
+            alert("✅ Paystack Payment Successful!");
+          }).catch((err) => {
+            console.error("Error saving to Firestore:", err);
+            alert("✅ Payment successful, but failed to save. Contact admin.");
           });
-          alert("✅ Paystack Payment Successful!");
         },
         onClose: function () {
-          alert("❌ Payment was cancelled.");
+          alert("❌ Payment cancelled.");
         }
       });
-      handler.openIframe();
-    };
 
-    // FLUTTERWAVE PAYMENT
-    window.payWithFlutterwave = () => {
+      handler.openIframe();
+    }
+
+    // ✅ Flutterwave Payment
+    function payWithFlutterwave() {
+      const user = auth.currentUser;
+      if (!user) {
+        alert("❌ Please login first.");
+        return;
+      }
+
       FlutterwaveCheckout({
-        public_key: "FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxxx-X", // 🔁 Replace this with your Flutterwave public key
+        public_key: "FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxxx-X", // Replace with your Flutterwave key
         tx_ref: "INTELPAY_" + Date.now(),
         amount: 5500,
         currency: "NGN",
-        payment_options: "card,ussd,banktransfer",
         customer: {
-          email: currentUser.email
+          email: user.email
         },
-        callback: async function (response) {
+        callback: function (response) {
           if (response.status === "successful") {
-            await setDoc(doc(db, "payments", currentUser.uid), {
+            db.collection("payments").doc(user.uid).set({
               method: "flutterwave",
               status: "success",
               ref: response.transaction_id,
@@ -143,9 +151,9 @@
             alert("❌ Payment failed.");
           }
         },
-        onclose: () => alert("❌ Payment closed.")
+        onclose: () => alert("❌ Payment window closed.")
       });
-    };
+    }
   </script>
 </body>
 </html>
