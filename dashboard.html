@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>User Dashboard – IntelPay</title>
+  <title>Dashboard – IntelPay</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -10,38 +10,50 @@
 
   <!-- Top Navbar -->
   <header class="bg-gray-800 px-4 py-3 flex items-center justify-between shadow-md">
-    <h1 class="text-xl font-bold">💰 IntelPay</h1>
+    <h1 class="text-xl font-bold">💼 IntelPay Dashboard</h1>
     <nav class="space-x-4 hidden md:block">
       <a href="dashboard.html" class="hover:text-blue-400">Dashboard</a>
       <a href="withdraw.html" class="hover:text-blue-400">Withdraw</a>
+      <a href="invite.html" class="hover:text-blue-400">Invite</a>
+      <a href="support.html" class="hover:text-blue-400">Support</a>
       <a href="#" id="logoutBtn" class="hover:text-red-400">Logout</a>
     </nav>
   </header>
 
   <div class="flex flex-1">
-
-    <!-- Sidebar (visible on md+) -->
+    <!-- Sidebar -->
     <aside class="bg-gray-800 w-48 p-4 hidden md:block">
       <ul class="space-y-4">
-        <li><a href="dashboard.html" class="block hover:text-blue-400">🏠 Overview</a></li>
+        <li><a href="dashboard.html" class="block hover:text-blue-400">🏠 Home</a></li>
         <li><a href="withdraw.html" class="block hover:text-blue-400">💸 Withdraw</a></li>
-        <li><a href="invite.html" class="block hover:text-blue-400">👥 Invite & Earn</a></li>
+        <li><a href="invite.html" class="block hover:text-blue-400">👥 Invite</a></li>
         <li><a href="support.html" class="block hover:text-blue-400">📞 Support</a></li>
         <li><a href="#" id="logoutSidebar" class="block hover:text-red-400">🚪 Logout</a></li>
       </ul>
     </aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 p-6">
-      <h2 class="text-2xl font-bold mb-4">Welcome, <span id="userName">User</span></h2>
+    <!-- Main Dashboard -->
+    <main class="flex-1 p-6 space-y-6">
+      <h2 class="text-2xl font-bold">Welcome, <span id="username">User</span> 👋</h2>
+      <p class="text-sm text-gray-400">Your current earnings will grow 4% daily (after activation) up to ₦5500.</p>
 
-      <div class="bg-gray-800 rounded p-6 mb-6 shadow">
-        <p class="text-sm text-gray-400 mb-1">Total Earnings</p>
-        <h3 class="text-4xl font-bold text-green-400">₦<span id="earnings">0</span></h3>
-        <p class="text-xs text-gray-500 mt-1">Earnings increase by 4% daily for 30 days</p>
+      <div class="bg-gray-800 p-6 rounded shadow-md">
+        <h3 class="text-lg font-semibold mb-2">💰 Current Balance</h3>
+        <div class="text-3xl font-bold mb-1">₦<span id="balance">0.00</span></div>
+        <div class="h-3 bg-gray-700 rounded-full overflow-hidden">
+          <div id="progress" class="bg-green-500 h-full transition-all duration-700" style="width: 0%"></div>
+        </div>
       </div>
 
-      <div class="text-sm text-gray-300">📅 Last login: <span id="lastLogin">—</span></div>
+      <div class="bg-gray-800 p-6 rounded shadow-md">
+        <h3 class="text-lg font-semibold mb-2">⏱️ Days Active</h3>
+        <p class="text-xl" id="daysActive">0</p>
+      </div>
+
+      <div class="text-sm text-gray-500">
+        ⚠️ If you haven’t paid ₦5500 to activate, earnings will not increase.<br>
+        You can pay via <a href="pay.html" class="text-blue-400 underline">Paystack</a>, Flutterwave or upload crypto proof.
+      </div>
     </main>
   </div>
 
@@ -51,7 +63,7 @@
       getAuth, onAuthStateChanged, signOut
     } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
     import {
-      getFirestore, doc, getDoc, updateDoc, Timestamp
+      getFirestore, doc, getDoc, updateDoc, increment
     } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -67,48 +79,41 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const earningsEl = document.getElementById("earnings");
-    const nameEl = document.getElementById("userName");
-    const lastLoginEl = document.getElementById("lastLogin");
+    let currentUser;
+    const MAX_EARN = 5500;
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return location.href = "login.html";
-
+      currentUser = user;
       const userRef = doc(db, "users", user.uid);
       const snap = await getDoc(userRef);
-      if (!snap.exists()) return alert("User not found.");
 
-      const data = snap.data();
-      nameEl.textContent = data.name || "User";
+      if (!snap.exists()) return alert("No user data found.");
 
-      // Handle earnings growth
-      const lastLogin = data.lastLogin?.toDate?.() || new Date();
-      lastLoginEl.textContent = lastLogin.toDateString();
+      const userData = snap.data();
+      document.getElementById("username").textContent = userData.name || "User";
+      document.getElementById("balance").textContent = (userData.earnings || 0).toFixed(2);
+      document.getElementById("daysActive").textContent = userData.daysActive || 0;
 
-      const now = new Date();
-      const msPerDay = 1000 * 60 * 60 * 24;
-      const daysPassed = Math.floor((now - lastLogin) / msPerDay);
+      const progress = Math.min(100, (userData.earnings / MAX_EARN) * 100);
+      document.getElementById("progress").style.width = progress + "%";
 
-      let earnings = data.earnings || 0;
-      let daysActive = data.daysActive || 0;
+      // Earnings logic
+      const today = new Date().toDateString();
+      if (userData.lastLogin !== today && userData.activated === true) {
+        const current = userData.earnings || 0;
+        const next = Math.min(MAX_EARN, current + current * 0.04);
 
-      for (let i = 0; i < daysPassed; i++) {
-        if (daysActive < 30) {
-          earnings *= 1.04;
-          daysActive++;
-        }
+        await updateDoc(userRef, {
+          earnings: next,
+          daysActive: increment(1),
+          lastLogin: today
+        });
+
+        document.getElementById("balance").textContent = next.toFixed(2);
+        document.getElementById("progress").style.width = Math.min(100, (next / MAX_EARN) * 100) + "%";
+        document.getElementById("daysActive").textContent = (userData.daysActive || 0) + 1;
       }
-
-      // Cap at ₦5500
-      if (earnings > 5500) earnings = 5500;
-
-      await updateDoc(userRef, {
-        earnings,
-        daysActive,
-        lastLogin: Timestamp.fromDate(now)
-      });
-
-      earningsEl.textContent = earnings.toFixed(2);
     });
 
     document.getElementById("logoutBtn").onclick =
