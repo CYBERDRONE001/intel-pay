@@ -3,22 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <title>Withdraw – IntelPay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white p-6 min-h-screen">
-  <h2 class="text-2xl font-bold mb-6">Request Withdrawal</h2>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col">
 
-  <form id="withdrawForm" class="space-y-4 max-w-md">
-    <input type="text" id="accountName" placeholder="Account Name" required class="w-full p-2 bg-gray-700 rounded" />
-    <input type="text" id="bankName" placeholder="Bank Name" required class="w-full p-2 bg-gray-700 rounded" />
-    <input type="text" id="accountNumber" placeholder="Account Number" required class="w-full p-2 bg-gray-700 rounded" />
-    <button type="submit" class="w-full bg-green-600 p-2 rounded">Submit</button>
-  </form>
+  <!-- Top Navbar -->
+  <header class="bg-gray-800 px-4 py-3 flex items-center justify-between shadow-md">
+    <h1 class="text-xl font-bold">💰 IntelPay</h1>
+    <nav class="space-x-4 hidden md:block">
+      <a href="dashboard.html" class="hover:text-blue-400">Dashboard</a>
+      <a href="withdraw.html" class="hover:text-blue-400">Withdraw</a>
+      <a href="#" id="logoutBtn" class="hover:text-red-400">Logout</a>
+    </nav>
+  </header>
+
+  <div class="flex flex-1">
+    <!-- Sidebar -->
+    <aside class="bg-gray-800 w-48 p-4 hidden md:block">
+      <ul class="space-y-4">
+        <li><a href="dashboard.html" class="block hover:text-blue-400">🏠 Overview</a></li>
+        <li><a href="withdraw.html" class="block hover:text-blue-400">💸 Withdraw</a></li>
+        <li><a href="invite.html" class="block hover:text-blue-400">👥 Invite & Earn</a></li>
+        <li><a href="support.html" class="block hover:text-blue-400">📞 Support</a></li>
+        <li><a href="#" id="logoutSidebar" class="block hover:text-red-400">🚪 Logout</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Section -->
+    <main class="flex-1 p-6">
+      <h2 class="text-2xl font-bold mb-4">Withdraw Earnings</h2>
+
+      <form id="withdrawForm" class="bg-gray-800 p-6 rounded shadow-md max-w-lg space-y-4">
+        <input type="text" id="fullName" placeholder="Full Name" required class="w-full p-2 rounded bg-gray-700" />
+        <input type="text" id="bank" placeholder="Bank Name" required class="w-full p-2 rounded bg-gray-700" />
+        <input type="text" id="accountNumber" placeholder="Account Number" required class="w-full p-2 rounded bg-gray-700" />
+        <input type="number" id="amount" placeholder="Amount (max ₦5500)" required class="w-full p-2 rounded bg-gray-700" />
+        <button type="submit" class="bg-blue-600 w-full p-2 rounded">Request Withdrawal</button>
+      </form>
+    </main>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged, signOut
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, addDoc, collection, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
@@ -33,66 +66,49 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let currentUser = null;
-    let userData = null;
+    let currentUserId = null;
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return location.href = "login.html";
-      currentUser = user;
-      const snap = await getDoc(doc(db, "users", user.uid));
-      userData = snap.data();
+      currentUserId = user.uid;
+
+      const snap = await getDoc(doc(db, "users", currentUserId));
+      if (snap.exists()) {
+        document.getElementById("amount").value = snap.data().earnings.toFixed(2);
+      }
     });
 
     document.getElementById("withdrawForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      const name = e.target.fullName.value;
+      const bank = e.target.bank.value;
+      const account = e.target.accountNumber.value;
+      const amount = parseFloat(e.target.amount.value);
 
-      const accountName = e.target.accountName.value;
-      const bankName = e.target.bankName.value;
-      const accountNumber = e.target.accountNumber.value;
+      if (amount > 5500) {
+        alert("❌ Maximum withdrawable amount is ₦5500.");
+        return;
+      }
 
-      const amount = Math.min(userData.earnings || 0, 5500);
-      if (amount < 1000) return alert("You must earn at least ₦1000 to withdraw.");
-
-      // Store in Firestore
-      await setDoc(doc(db, "withdrawals", `${currentUser.uid}_${Date.now()}`), {
-        userId: currentUser.uid,
-        name: accountName,
-        bank: bankName,
-        number: accountNumber,
+      await addDoc(collection(db, "withdrawals"), {
+        userId: currentUserId,
+        name,
+        bank,
+        account,
         amount,
         status: "pending",
         createdAt: serverTimestamp()
       });
 
-      // Send Email (via FormSubmit)
-      const emailForm = document.createElement("form");
-      emailForm.action = "https://formsubmit.co/YOUR_EMAIL@example.com"; // ✅ Replace
-      emailForm.method = "POST";
-      emailForm.style.display = "none";
-
-      const inputs = {
-        "Account Name": accountName,
-        "Bank Name": bankName,
-        "Account Number": accountNumber,
-        "User Email": currentUser.email,
-        "Amount": `₦${amount}`,
-        "_captcha": "false",
-        "_subject": "New IntelPay Withdrawal Request"
-      };
-
-      for (const key in inputs) {
-        const input = document.createElement("input");
-        input.name = key;
-        input.value = inputs[key];
-        emailForm.appendChild(input);
-      }
-
-      document.body.appendChild(emailForm);
-      emailForm.submit();
-
-      alert("Withdrawal request submitted! We’ll contact you soon.");
-      location.href = "dashboard.html";
+      alert("✅ Withdrawal request sent. You will be contacted shortly.");
+      e.target.reset();
     });
+
+    document.getElementById("logoutBtn").onclick =
+    document.getElementById("logoutSidebar").onclick = async () => {
+      await signOut(auth);
+      location.href = "login.html";
+    };
   </script>
 </body>
 </html>
