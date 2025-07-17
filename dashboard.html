@@ -3,30 +3,56 @@
 <head>
   <meta charset="UTF-8" />
   <title>User Dashboard – IntelPay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white p-6 min-h-screen">
-  <nav class="flex justify-between items-center mb-6 bg-gray-800 p-4 rounded">
-    <h1 class="text-xl font-bold">IntelPay Dashboard</h1>
-    <button id="logoutBtn" class="bg-red-600 px-4 py-1 rounded">Logout</button>
-  </nav>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col">
 
-  <section>
-    <h2 class="text-2xl font-semibold">Hello, <span id="userName" class="text-green-400"></span></h2>
-    <p class="mt-2">💰 Earnings: <span id="earnings" class="text-blue-400 font-bold">₦0</span></p>
-    <p class="mt-2">📦 Plan: <span id="plan" class="text-yellow-400">—</span></p>
-    <p class="mt-2">🔗 Referral Link:</p>
-    <code id="refLink" class="block bg-gray-800 p-2 rounded text-sm"></code>
+  <!-- Top Navbar -->
+  <header class="bg-gray-800 px-4 py-3 flex items-center justify-between shadow-md">
+    <h1 class="text-xl font-bold">💰 IntelPay</h1>
+    <nav class="space-x-4 hidden md:block">
+      <a href="dashboard.html" class="hover:text-blue-400">Dashboard</a>
+      <a href="withdraw.html" class="hover:text-blue-400">Withdraw</a>
+      <a href="#" id="logoutBtn" class="hover:text-red-400">Logout</a>
+    </nav>
+  </header>
 
-    <img id="miningImage" src="" alt="Mining Rig" class="mt-4 rounded shadow max-w-full border border-gray-700" />
+  <div class="flex flex-1">
 
-    <a href="withdraw.html" class="block mt-6 bg-green-600 px-4 py-2 text-center rounded hover:bg-green-500">Withdraw</a>
-  </section>
+    <!-- Sidebar (visible on md+) -->
+    <aside class="bg-gray-800 w-48 p-4 hidden md:block">
+      <ul class="space-y-4">
+        <li><a href="dashboard.html" class="block hover:text-blue-400">🏠 Overview</a></li>
+        <li><a href="withdraw.html" class="block hover:text-blue-400">💸 Withdraw</a></li>
+        <li><a href="invite.html" class="block hover:text-blue-400">👥 Invite & Earn</a></li>
+        <li><a href="support.html" class="block hover:text-blue-400">📞 Support</a></li>
+        <li><a href="#" id="logoutSidebar" class="block hover:text-red-400">🚪 Logout</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6">
+      <h2 class="text-2xl font-bold mb-4">Welcome, <span id="userName">User</span></h2>
+
+      <div class="bg-gray-800 rounded p-6 mb-6 shadow">
+        <p class="text-sm text-gray-400 mb-1">Total Earnings</p>
+        <h3 class="text-4xl font-bold text-green-400">₦<span id="earnings">0</span></h3>
+        <p class="text-xs text-gray-500 mt-1">Earnings increase by 4% daily for 30 days</p>
+      </div>
+
+      <div class="text-sm text-gray-300">📅 Last login: <span id="lastLogin">—</span></div>
+    </main>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged, signOut
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, updateDoc, Timestamp
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
@@ -41,49 +67,55 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const userName = document.getElementById("userName");
     const earningsEl = document.getElementById("earnings");
-    const refLink = document.getElementById("refLink");
-    const planName = document.getElementById("plan");
-    const miningImg = document.getElementById("miningImage");
-    const logoutBtn = document.getElementById("logoutBtn");
+    const nameEl = document.getElementById("userName");
+    const lastLoginEl = document.getElementById("lastLogin");
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return location.href = "login.html";
 
-      const docRef = doc(db, "users", user.uid);
-      const snap = await getDoc(docRef);
+      const userRef = doc(db, "users", user.uid);
+      const snap = await getDoc(userRef);
+      if (!snap.exists()) return alert("User not found.");
+
       const data = snap.data();
+      nameEl.textContent = data.name || "User";
 
-      userName.textContent = data.name || user.email;
-      refLink.textContent = `${location.origin}/register.html?ref=${user.uid}`;
+      // Handle earnings growth
+      const lastLogin = data.lastLogin?.toDate?.() || new Date();
+      lastLoginEl.textContent = lastLogin.toDateString();
 
-      if (!data.activated || !data.activatedAt || !data.earningsRate) {
-        earningsEl.textContent = "₦0";
-        planName.textContent = "No plan selected";
-        miningImg.src = "https://i.imgur.com/aDvhZ0n.jpg";
-        return;
+      const now = new Date();
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const daysPassed = Math.floor((now - lastLogin) / msPerDay);
+
+      let earnings = data.earnings || 0;
+      let daysActive = data.daysActive || 0;
+
+      for (let i = 0; i < daysPassed; i++) {
+        if (daysActive < 30) {
+          earnings *= 1.04;
+          daysActive++;
+        }
       }
 
-      const startDate = new Date(data.activatedAt.seconds * 1000);
-      const now = new Date();
-      const days = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+      // Cap at ₦5500
+      if (earnings > 5500) earnings = 5500;
 
-      const rate = data.earningsRate;
-      const base = data.initialAmount;
-      const max = 5500;
+      await updateDoc(userRef, {
+        earnings,
+        daysActive,
+        lastLogin: Timestamp.fromDate(now)
+      });
 
-      const current = Math.min(base * rate * days, max);
-      await updateDoc(docRef, { earnings: current });
-
-      earningsEl.textContent = `₦${current.toFixed(2)}`;
-      planName.textContent = data.miningPlan?.toUpperCase() || "—";
-      miningImg.src = data.miningImage || "https://i.imgur.com/aDvhZ0n.jpg";
+      earningsEl.textContent = earnings.toFixed(2);
     });
 
-    logoutBtn.addEventListener("click", () => {
-      signOut(auth).then(() => location.href = "login.html");
-    });
+    document.getElementById("logoutBtn").onclick =
+    document.getElementById("logoutSidebar").onclick = async () => {
+      await signOut(auth);
+      location.href = "login.html";
+    };
   </script>
 </body>
 </html>
