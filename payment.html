@@ -2,44 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Make Payment – IntelPay</title>
+  <title>IntelPay – Make Payment</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Paystack and Flutterwave JS -->
-  <script src="https://js.paystack.co/v1/inline.js"></script>
-  <script src="https://checkout.flutterwave.com/v3.js"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-6">
+<body class="bg-gray-900 text-white p-4">
 
-  <h1 class="text-2xl font-bold mb-6">💳 Activate Account – ₦5500</h1>
+  <div class="max-w-md mx-auto bg-gray-800 rounded-lg p-6 shadow-lg">
+    <h2 class="text-2xl font-bold mb-4 text-center">💳 Activate Your Account – ₦5500</h2>
 
-  <div class="space-y-6 w-full max-w-lg">
-
-    <!-- Paystack Button -->
-    <button id="paystackBtn" class="w-full bg-green-600 hover:bg-green-700 py-3 rounded text-lg font-bold">Pay with Paystack</button>
-
-    <!-- Flutterwave Button -->
-    <button id="flutterBtn" class="w-full bg-purple-600 hover:bg-purple-700 py-3 rounded text-lg font-bold">Pay with Flutterwave</button>
-
-    <!-- Crypto Upload -->
-    <div class="bg-gray-800 p-4 rounded">
-      <h2 class="text-lg font-semibold mb-2">Pay with Crypto</h2>
-      <p class="text-sm text-gray-400 mb-2">Upload payment screenshot (after sending to our wallet)</p>
-      <input type="file" id="screenshot" accept="image/*" class="w-full bg-gray-700 p-2 rounded mb-2" />
-      <button id="uploadBtn" class="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded">Upload Screenshot</button>
+    <!-- Payment Buttons -->
+    <div class="space-y-3 mb-6">
+      <button onclick="payWithPaystack()" class="w-full bg-green-600 hover:bg-green-700 p-3 rounded">Pay with Paystack</button>
+      <button onclick="payWithFlutterwave()" class="w-full bg-yellow-500 hover:bg-yellow-600 p-3 rounded">Pay with Flutterwave</button>
     </div>
 
-    <a href="dashboard.html" class="text-blue-400 text-sm underline block text-center">← Back to Dashboard</a>
+    <!-- Crypto Upload -->
+    <h3 class="text-lg font-bold mb-2">🪙 Pay with Crypto (Upload Screenshot)</h3>
+    <form id="screenshotForm" class="space-y-3">
+      <input type="file" id="screenshot" required class="w-full p-2 bg-gray-700 rounded text-white" />
+      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 p-2 rounded">Upload Screenshot</button>
+    </form>
 
+    <div id="statusMsg" class="mt-4 text-sm text-center"></div>
   </div>
 
+  <!-- Firebase & Payment Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import {
       getAuth, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
     import {
-      getFirestore, doc, updateDoc
+      getFirestore, doc, setDoc
     } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
     import {
       getStorage, ref, uploadBytes, getDownloadURL
@@ -59,80 +54,39 @@
     const db = getFirestore(app);
     const storage = getStorage(app);
 
+    const form = document.getElementById("screenshotForm");
+    const statusMsg = document.getElementById("statusMsg");
+
     let currentUser;
 
-    onAuthStateChanged(auth, user => {
-      if (!user) location.href = "login.html";
+    onAuthStateChanged(auth, (user) => {
+      if (!user) return window.location.href = "login.html";
       currentUser = user;
     });
 
-    // Paystack
-    document.getElementById("paystackBtn").onclick = () => {
-      const handler = PaystackPop.setup({
-        key: "pk_live_725e9c0357625ec847ec27b37e4d1033ac90a718", // 🔁 Replace with your public key
-        email: currentUser.email,
-        amount: 550000, // Kobo
-        currency: "NGN",
-        callback: async (response) => {
-          await updateDoc(doc(db, "users", currentUser.uid), {
-            activated: true,
-            paymentMethod: "Paystack",
-            paymentRef: response.reference
-          });
-          alert("✅ Payment successful!");
-          location.href = "dashboard.html";
-        },
-        onClose: () => alert("❌ Payment cancelled.")
-      });
-      handler.openIframe();
-    };
-
-    // Flutterwave
-    document.getElementById("flutterBtn").onclick = () => {
-      FlutterwaveCheckout({
-        public_key: "FLWPUBK_TEST-xxxxxx", // 🔁 Replace with your Flutterwave key
-        tx_ref: "INTELPAY_" + Date.now(),
-        amount: 5500,
-        currency: "NGN",
-        customer: {
-          email: currentUser.email
-        },
-        callback: async (response) => {
-          if (response.status === "successful") {
-            await updateDoc(doc(db, "users", currentUser.uid), {
-              activated: true,
-              paymentMethod: "Flutterwave",
-              paymentRef: response.transaction_id
-            });
-            alert("✅ Payment successful!");
-            location.href = "dashboard.html";
-          }
-        },
-        onclose: () => alert("❌ Payment closed.")
-      });
-    };
-
-    // Upload crypto screenshot
-    document.getElementById("uploadBtn").onclick = async () => {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
       const file = document.getElementById("screenshot").files[0];
-      if (!file) return alert("Please select a screenshot.");
+      if (!file || !currentUser) return;
 
-      const storageRef = ref(storage, `crypto_proofs/${currentUser.uid}_${Date.now()}`);
-      try {
-        await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(storageRef);
-        await updateDoc(doc(db, "users", currentUser.uid), {
-          activated: false,
-          paymentMethod: "Crypto",
-          cryptoProof: downloadURL,
-          proofStatus: "Pending"
-        });
-        alert("✅ Screenshot uploaded. Admin will verify shortly.");
-        location.href = "dashboard.html";
-      } catch (err) {
-        alert("❌ Upload failed: " + err.message);
-      }
-    };
+      const storageRef = ref(storage, `payments/${currentUser.uid}/${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+
+      await setDoc(doc(db, "payments", currentUser.uid), {
+        method: "crypto",
+        status: "pending",
+        proofURL: url,
+        timestamp: Date.now()
+      });
+
+      statusMsg.innerHTML = "✅ Screenshot uploaded successfully! Waiting for admin verification.";
+    });
+
+    // Placeholder: Replace with real Paystack/Flutterwave later
+    window.payWithPaystack = () => alert("Integrate Paystack here.");
+    window.payWithFlutterwave = () => alert("Integrate Flutterwave here.");
   </script>
+
 </body>
 </html>
