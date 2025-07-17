@@ -8,41 +8,28 @@
 </head>
 <body class="bg-gray-900 text-white min-h-screen flex flex-col">
 
-  <!-- Top Navbar -->
+  <!-- Navbar -->
   <header class="bg-gray-800 px-4 py-3 flex items-center justify-between shadow-md">
-    <h1 class="text-xl font-bold">💰 IntelPay</h1>
+    <h1 class="text-xl font-bold">💸 IntelPay Withdrawal</h1>
     <nav class="space-x-4 hidden md:block">
       <a href="dashboard.html" class="hover:text-blue-400">Dashboard</a>
       <a href="withdraw.html" class="hover:text-blue-400">Withdraw</a>
+      <a href="invite.html" class="hover:text-blue-400">Invite</a>
+      <a href="support.html" class="hover:text-blue-400">Support</a>
       <a href="#" id="logoutBtn" class="hover:text-red-400">Logout</a>
     </nav>
   </header>
 
-  <div class="flex flex-1">
-    <!-- Sidebar -->
-    <aside class="bg-gray-800 w-48 p-4 hidden md:block">
-      <ul class="space-y-4">
-        <li><a href="dashboard.html" class="block hover:text-blue-400">🏠 Overview</a></li>
-        <li><a href="withdraw.html" class="block hover:text-blue-400">💸 Withdraw</a></li>
-        <li><a href="invite.html" class="block hover:text-blue-400">👥 Invite & Earn</a></li>
-        <li><a href="support.html" class="block hover:text-blue-400">📞 Support</a></li>
-        <li><a href="#" id="logoutSidebar" class="block hover:text-red-400">🚪 Logout</a></li>
-      </ul>
-    </aside>
-
-    <!-- Main Section -->
-    <main class="flex-1 p-6">
-      <h2 class="text-2xl font-bold mb-4">Withdraw Earnings</h2>
-
-      <form id="withdrawForm" class="bg-gray-800 p-6 rounded shadow-md max-w-lg space-y-4">
-        <input type="text" id="fullName" placeholder="Full Name" required class="w-full p-2 rounded bg-gray-700" />
-        <input type="text" id="bank" placeholder="Bank Name" required class="w-full p-2 rounded bg-gray-700" />
-        <input type="text" id="accountNumber" placeholder="Account Number" required class="w-full p-2 rounded bg-gray-700" />
-        <input type="number" id="amount" placeholder="Amount (max ₦5500)" required class="w-full p-2 rounded bg-gray-700" />
-        <button type="submit" class="bg-blue-600 w-full p-2 rounded">Request Withdrawal</button>
-      </form>
-    </main>
-  </div>
+  <main class="flex-1 p-6 max-w-xl mx-auto">
+    <h2 class="text-2xl font-bold mb-4">Withdrawal Request Form</h2>
+    <form id="withdrawForm" class="space-y-4 bg-gray-800 p-6 rounded">
+      <input type="text" id="name" placeholder="Full Name" required class="w-full p-2 bg-gray-700 rounded" />
+      <input type="text" id="bank" placeholder="Bank Name" required class="w-full p-2 bg-gray-700 rounded" />
+      <input type="number" id="account" placeholder="Account Number" required class="w-full p-2 bg-gray-700 rounded" />
+      <input type="number" id="amount" placeholder="Amount (max ₦5500)" required class="w-full p-2 bg-gray-700 rounded" />
+      <button type="submit" class="bg-green-600 w-full p-2 rounded hover:bg-green-700">Submit Request</button>
+    </form>
+  </main>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
@@ -50,7 +37,7 @@
       getAuth, onAuthStateChanged, signOut
     } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
     import {
-      getFirestore, doc, getDoc, addDoc, collection, serverTimestamp
+      getFirestore, doc, getDoc, addDoc, collection
     } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -66,46 +53,50 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let currentUserId = null;
+    let currentUser, userData;
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return location.href = "login.html";
-      currentUserId = user.uid;
+      currentUser = user;
 
-      const snap = await getDoc(doc(db, "users", currentUserId));
-      if (snap.exists()) {
-        document.getElementById("amount").value = snap.data().earnings.toFixed(2);
-      }
+      const userRef = doc(db, "users", user.uid);
+      const snap = await getDoc(userRef);
+
+      if (!snap.exists()) return alert("User record not found.");
+      userData = snap.data();
     });
 
     document.getElementById("withdrawForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const name = e.target.fullName.value;
-      const bank = e.target.bank.value;
-      const account = e.target.accountNumber.value;
+      const name = e.target.name.value.trim();
+      const bank = e.target.bank.value.trim();
+      const account = e.target.account.value.trim();
       const amount = parseFloat(e.target.amount.value);
 
-      if (amount > 5500) {
-        alert("❌ Maximum withdrawable amount is ₦5500.");
-        return;
+      if (!name || !bank || !account || !amount) return alert("All fields required.");
+      if (amount > 5500) return alert("🚫 Max withdraw amount is ₦5500.");
+      if (amount > (userData.earnings || 0)) return alert("Insufficient balance.");
+
+      try {
+        await addDoc(collection(db, "withdrawals"), {
+          uid: currentUser.uid,
+          name,
+          bank,
+          account,
+          amount,
+          status: "Pending",
+          email: currentUser.email,
+          timestamp: new Date().toISOString()
+        });
+
+        alert("✅ Withdrawal request submitted.");
+        e.target.reset();
+      } catch (err) {
+        alert("❌ " + err.message);
       }
-
-      await addDoc(collection(db, "withdrawals"), {
-        userId: currentUserId,
-        name,
-        bank,
-        account,
-        amount,
-        status: "pending",
-        createdAt: serverTimestamp()
-      });
-
-      alert("✅ Withdrawal request sent. You will be contacted shortly.");
-      e.target.reset();
     });
 
-    document.getElementById("logoutBtn").onclick =
-    document.getElementById("logoutSidebar").onclick = async () => {
+    document.getElementById("logoutBtn").onclick = async () => {
       await signOut(auth);
       location.href = "login.html";
     };
