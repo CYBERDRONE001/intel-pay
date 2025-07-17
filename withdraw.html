@@ -5,39 +5,46 @@
   <title>Withdraw – IntelPay</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- ✅ EmailJS Script -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script>
+    (function () {
+      emailjs.init("oGc09dmwjp7zI_JmV"); // 🔁 Replace with your actual PUBLIC KEY
+    })();
+  </script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col">
+<body class="bg-gray-900 text-white p-6">
 
-  <!-- Navbar -->
-  <header class="bg-gray-800 px-4 py-3 flex items-center justify-between shadow-md">
-    <h1 class="text-xl font-bold">💸 IntelPay Withdrawal</h1>
-    <nav class="space-x-4 hidden md:block">
-      <a href="dashboard.html" class="hover:text-blue-400">Dashboard</a>
-      <a href="withdraw.html" class="hover:text-blue-400">Withdraw</a>
-      <a href="invite.html" class="hover:text-blue-400">Invite</a>
-      <a href="support.html" class="hover:text-blue-400">Support</a>
-      <a href="#" id="logoutBtn" class="hover:text-red-400">Logout</a>
-    </nav>
-  </header>
+  <h1 class="text-2xl font-bold mb-6 text-center">💸 Withdrawal Request</h1>
 
-  <main class="flex-1 p-6 max-w-xl mx-auto">
-    <h2 class="text-2xl font-bold mb-4">Withdrawal Request Form</h2>
-    <form id="withdrawForm" class="space-y-4 bg-gray-800 p-6 rounded">
-      <input type="text" id="name" placeholder="Full Name" required class="w-full p-2 bg-gray-700 rounded" />
-      <input type="text" id="bank" placeholder="Bank Name" required class="w-full p-2 bg-gray-700 rounded" />
-      <input type="number" id="account" placeholder="Account Number" required class="w-full p-2 bg-gray-700 rounded" />
-      <input type="number" id="amount" placeholder="Amount (max ₦5500)" required class="w-full p-2 bg-gray-700 rounded" />
-      <button type="submit" class="bg-green-600 w-full p-2 rounded hover:bg-green-700">Submit Request</button>
-    </form>
-  </main>
+  <form id="withdrawForm" class="bg-gray-800 max-w-md mx-auto p-6 rounded space-y-4">
+    <div>
+      <label>Full Name</label>
+      <input type="text" id="fullName" required class="w-full p-2 rounded bg-gray-700 mt-1" />
+    </div>
+    <div>
+      <label>Bank Name</label>
+      <input type="text" id="bankName" required class="w-full p-2 rounded bg-gray-700 mt-1" />
+    </div>
+    <div>
+      <label>Account Number</label>
+      <input type="text" id="accountNumber" required class="w-full p-2 rounded bg-gray-700 mt-1" />
+    </div>
+    <button type="submit" class="bg-green-600 w-full py-2 rounded hover:bg-green-700">Submit Request</button>
+  </form>
 
+  <p class="text-center text-sm text-green-400 mt-4 hidden" id="status">✅ Request sent!</p>
+  <a href="dashboard.html" class="block text-center text-blue-400 mt-6 underline">← Back to Dashboard</a>
+
+  <!-- ✅ Firebase Integration -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import {
-      getAuth, onAuthStateChanged, signOut
+      getAuth, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
     import {
-      getFirestore, doc, getDoc, addDoc, collection
+      getFirestore, collection, addDoc
     } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -53,53 +60,47 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    let currentUser, userData;
+    let userEmail = "";
 
-    onAuthStateChanged(auth, async (user) => {
+    onAuthStateChanged(auth, (user) => {
       if (!user) return location.href = "login.html";
-      currentUser = user;
-
-      const userRef = doc(db, "users", user.uid);
-      const snap = await getDoc(userRef);
-
-      if (!snap.exists()) return alert("User record not found.");
-      userData = snap.data();
+      userEmail = user.email;
     });
 
     document.getElementById("withdrawForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const name = e.target.name.value.trim();
-      const bank = e.target.bank.value.trim();
-      const account = e.target.account.value.trim();
-      const amount = parseFloat(e.target.amount.value);
 
-      if (!name || !bank || !account || !amount) return alert("All fields required.");
-      if (amount > 5500) return alert("🚫 Max withdraw amount is ₦5500.");
-      if (amount > (userData.earnings || 0)) return alert("Insufficient balance.");
+      const fullName = document.getElementById("fullName").value;
+      const bankName = document.getElementById("bankName").value;
+      const accountNumber = document.getElementById("accountNumber").value;
 
       try {
+        // Save withdrawal data to Firestore
         await addDoc(collection(db, "withdrawals"), {
-          uid: currentUser.uid,
-          name,
-          bank,
-          account,
-          amount,
-          status: "Pending",
-          email: currentUser.email,
-          timestamp: new Date().toISOString()
+          email: userEmail,
+          fullName,
+          bankName,
+          accountNumber,
+          date: new Date().toISOString()
         });
 
-        alert("✅ Withdrawal request submitted.");
+        // Send email using EmailJS
+        await emailjs.send("service_h46ycvt", "template_ezkjhnj", {
+          user_email: userEmail,
+          full_name: fullName,
+          bank_name: bankName,
+          account_number: accountNumber
+        });
+
+        document.getElementById("status").textContent = "✅ Withdrawal sent and email alert delivered!";
+        document.getElementById("status").classList.remove("hidden");
         e.target.reset();
-      } catch (err) {
-        alert("❌ " + err.message);
+
+      } catch (error) {
+        console.error("Error:", error);
+        alert("Something went wrong. Please try again.");
       }
     });
-
-    document.getElementById("logoutBtn").onclick = async () => {
-      await signOut(auth);
-      location.href = "login.html";
-    };
   </script>
 </body>
 </html>
