@@ -2,52 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Dashboard – IntelPay</title>
+  <title>Admin – IntelPay</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-900 text-white p-6">
+<body class="bg-gray-900 text-white min-h-screen p-6">
 
-  <h1 class="text-3xl font-bold mb-6 text-center">👨‍💼 IntelPay Admin Dashboard</h1>
+  <h1 class="text-3xl font-bold text-center mb-6">🛡️ IntelPay Admin – Withdrawal Dashboard</h1>
 
-  <!-- Analytics Overview -->
-  <div class="grid md:grid-cols-3 gap-6 mb-6">
-    <div class="bg-gray-800 p-4 rounded">
-      <h2 class="text-lg font-semibold mb-2">📈 Total Users</h2>
-      <p id="userCount" class="text-2xl font-bold">0</p>
-    </div>
-    <div class="bg-gray-800 p-4 rounded">
-      <h2 class="text-lg font-semibold mb-2">💰 Total Earnings</h2>
-      <p id="totalEarnings" class="text-2xl font-bold">₦0</p>
-    </div>
-    <div class="bg-gray-800 p-4 rounded">
-      <h2 class="text-lg font-semibold mb-2">🧾 Withdraw Requests</h2>
-      <p id="withdrawCount" class="text-2xl font-bold">0</p>
-    </div>
+  <!-- 🔍 Search Bar + Export -->
+  <div class="max-w-4xl mx-auto mb-4 flex flex-col md:flex-row justify-between gap-4">
+    <input type="text" id="searchInput" placeholder="Search by email..." class="p-2 rounded w-full md:w-2/3 bg-gray-800 text-white">
+    <button id="exportBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white">📥 Export CSV</button>
   </div>
 
-  <!-- Chart -->
-  <canvas id="analyticsChart" class="bg-gray-800 p-4 rounded max-w-4xl mx-auto mb-10"></canvas>
+  <!-- 📋 Withdrawal Cards -->
+  <div id="withdrawals" class="grid gap-4 max-w-4xl mx-auto"></div>
 
-  <!-- Pending Crypto Uploads -->
-  <div class="bg-gray-800 p-4 rounded mb-6">
-    <h2 class="text-xl font-bold mb-4">📤 Pending Crypto Proofs</h2>
-    <div id="cryptoList" class="space-y-4 text-sm"></div>
-  </div>
-
-  <!-- Export Button -->
-  <div class="text-center">
-    <button class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700" onclick="exportToSheet()">📥 Export to Google Sheet</button>
-  </div>
-
+  <!-- 🔌 Firebase + Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import {
       getAuth, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
     import {
-      getFirestore, collection, getDocs
+      getFirestore, collection, getDocs, doc, updateDoc
     } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -63,69 +42,75 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Only allow admin
-    const adminEmail = "aliuabdulwajud070@gmail.com"; // 🔁 Replace with your real admin email
+    const withdrawalsEl = document.getElementById("withdrawals");
+    const searchInput = document.getElementById("searchInput");
+    let allData = [];
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user || user.email !== adminEmail) {
-        alert("Unauthorized. Only admins allowed.");
-        return location.href = "login.html";
+    // ✅ Render Function
+    function render(data) {
+      withdrawalsEl.innerHTML = '';
+      if (data.length === 0) {
+        withdrawalsEl.innerHTML = "<p class='text-center text-gray-400'>No matching requests found.</p>";
       }
 
-      const usersSnap = await getDocs(collection(db, "users"));
-      const withdrawalsSnap = await getDocs(collection(db, "withdrawals"));
-
-      let total = 0;
-      let cryptoProofs = [];
-      usersSnap.forEach(doc => {
-        const data = doc.data();
-        total += parseFloat(data.earnings || 0);
-        if (data.paymentMethod === "Crypto" && data.proofStatus === "Pending") {
-          cryptoProofs.push({ email: data.email, link: data.cryptoProof });
-        }
+      data.forEach((item, i) => {
+        const statusColor = item.status === "processed" ? "text-green-400" : "text-yellow-400";
+        withdrawalsEl.innerHTML += `
+          <div class="bg-gray-800 rounded-lg p-4 shadow-md">
+            <p><strong>📧 Email:</strong> ${item.email}</p>
+            <p><strong>👤 Name:</strong> ${item.fullName}</p>
+            <p><strong>🏦 Bank:</strong> ${item.bankName}</p>
+            <p><strong>🔢 Account:</strong> ${item.accountNumber}</p>
+            <p><strong>🕒 Date:</strong> ${new Date(item.date).toLocaleString()}</p>
+            <p class="${statusColor}"><strong>Status:</strong> ${item.status || "pending"}</p>
+            ${item.status !== "processed" ? `<button onclick="markAsProcessed('${item.id}')" class="mt-2 bg-green-600 hover:bg-green-700 px-3 py-1 rounded">✅ Mark as Processed</button>` : ""}
+          </div>
+        `;
       });
+    }
 
-      document.getElementById("userCount").innerText = usersSnap.size;
-      document.getElementById("totalEarnings").innerText = "₦" + total.toFixed(2);
-      document.getElementById("withdrawCount").innerText = withdrawalsSnap.size;
+    // ✅ Mark as Processed
+    window.markAsProcessed = async (id) => {
+      const ref = doc(db, "withdrawals", id);
+      await updateDoc(ref, { status: "processed" });
+      alert("Marked as processed ✅");
+      location.reload();
+    };
 
-      // Render chart
-      new Chart(document.getElementById("analyticsChart"), {
-        type: "bar",
-        data: {
-          labels: ["Users", "Withdrawals"],
-          datasets: [{
-            label: "IntelPay Stats",
-            data: [usersSnap.size, withdrawalsSnap.size],
-            backgroundColor: ["#3b82f6", "#f59e0b"]
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: false },
-            title: { display: true, text: "User vs Withdrawals" }
-          }
-        }
-      });
-
-      // Show crypto screenshots
-      const listDiv = document.getElementById("cryptoList");
-      if (cryptoProofs.length === 0) {
-        listDiv.innerHTML = "<p class='text-gray-400'>No pending crypto uploads.</p>";
-      } else {
-        cryptoProofs.forEach(p => {
-          const item = document.createElement("div");
-          item.innerHTML = `<strong>${p.email}</strong><br/><a href="${p.link}" target="_blank" class="text-blue-400 underline">View Screenshot</a>`;
-          listDiv.appendChild(item);
-        });
-      }
+    // ✅ Filter
+    searchInput.addEventListener("input", () => {
+      const val = searchInput.value.toLowerCase();
+      const filtered = allData.filter(item => item.email.toLowerCase().includes(val));
+      render(filtered);
     });
 
-    // Export to sheet placeholder
-    function exportToSheet() {
-      alert("🧾 Export to Google Sheets will be added in a future update.");
-    }
+    // ✅ Export to CSV
+    document.getElementById("exportBtn").addEventListener("click", () => {
+      const csvRows = [
+        ["Email", "Full Name", "Bank", "Account", "Date", "Status"],
+        ...allData.map(d =>
+          [d.email, d.fullName, d.bankName, d.accountNumber, new Date(d.date).toLocaleString(), d.status || "pending"]
+        )
+      ];
+      const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
+      const link = document.createElement("a");
+      link.setAttribute("href", encodeURI(csvContent));
+      link.setAttribute("download", "withdrawals.csv");
+      link.click();
+    });
+
+    // ✅ Auth and Fetch
+    onAuthStateChanged(auth, async (user) => {
+      if (!user || user.email !== "youradmin@email.com") {
+        alert("Access denied.");
+        location.href = "login.html";
+        return;
+      }
+
+      const snapshot = await getDocs(collection(db, "withdrawals"));
+      allData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      render(allData);
+    });
   </script>
 </body>
 </html>
