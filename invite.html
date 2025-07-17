@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Invite & Earn – IntelPay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col">
+
+  <!-- Top Navbar -->
+  <header class="bg-gray-800 px-4 py-3 flex items-center justify-between shadow-md">
+    <h1 class="text-xl font-bold">💰 IntelPay</h1>
+    <nav class="space-x-4 hidden md:block">
+      <a href="dashboard.html" class="hover:text-blue-400">Dashboard</a>
+      <a href="withdraw.html" class="hover:text-blue-400">Withdraw</a>
+      <a href="#" id="logoutBtn" class="hover:text-red-400">Logout</a>
+    </nav>
+  </header>
+
+  <div class="flex flex-1">
+    <!-- Sidebar -->
+    <aside class="bg-gray-800 w-48 p-4 hidden md:block">
+      <ul class="space-y-4">
+        <li><a href="dashboard.html" class="block hover:text-blue-400">🏠 Overview</a></li>
+        <li><a href="withdraw.html" class="block hover:text-blue-400">💸 Withdraw</a></li>
+        <li><a href="invite.html" class="block hover:text-blue-400">👥 Invite & Earn</a></li>
+        <li><a href="support.html" class="block hover:text-blue-400">📞 Support</a></li>
+        <li><a href="#" id="logoutSidebar" class="block hover:text-red-400">🚪 Logout</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Section -->
+    <main class="flex-1 p-6">
+      <h2 class="text-2xl font-bold mb-4">👥 Invite Friends & Earn</h2>
+      <p class="mb-4 text-gray-300">Share your unique referral link to earn bonus when your friends join IntelPay.</p>
+
+      <div class="bg-gray-800 p-4 rounded shadow-md max-w-xl">
+        <div class="mb-4">
+          <label class="text-sm text-gray-400">Your Referral Link:</label>
+          <input type="text" id="refLink" readonly class="w-full p-2 mt-1 bg-gray-700 rounded" />
+        </div>
+
+        <div class="mb-4 flex justify-center">
+          <img id="qrCode" alt="QR Code" class="w-40 h-40 rounded" />
+        </div>
+
+        <div class="space-x-2 text-center">
+          <a id="waShare" target="_blank" class="inline-block bg-green-600 px-3 py-1 rounded">WhatsApp</a>
+          <a id="fbShare" target="_blank" class="inline-block bg-blue-600 px-3 py-1 rounded">Facebook</a>
+          <a id="twShare" target="_blank" class="inline-block bg-sky-500 px-3 py-1 rounded">Twitter</a>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import {
+      getAuth, onAuthStateChanged, signOut
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
+      authDomain: "intel-pay-ltd.firebaseapp.com",
+      projectId: "intel-pay-ltd",
+      storageBucket: "intel-pay-ltd.appspot.com",
+      messagingSenderId: "779411397815",
+      appId: "1:779411397815:web:7b6d9f34572d13a833c132"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const baseURL = "https://intel-pay.netlify.app/register.html?ref=";
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) return location.href = "login.html";
+
+      const refLink = baseURL + user.uid;
+      document.getElementById("refLink").value = refLink;
+
+      // Generate QR code from API
+      document.getElementById("qrCode").src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(refLink)}`;
+
+      // Share links
+      document.getElementById("waShare").href = `https://wa.me/?text=Join%20IntelPay%20and%20earn%20crypto!%20${encodeURIComponent(refLink)}`;
+      document.getElementById("fbShare").href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(refLink)}`;
+      document.getElementById("twShare").href = `https://twitter.com/intent/tweet?text=Join%20IntelPay%20and%20earn!%20${encodeURIComponent(refLink)}`;
+    });
+
+    document.getElementById("logoutBtn").onclick =
+    document.getElementById("logoutSidebar").onclick = async () => {
+      await signOut(auth);
+      location.href = "login.html";
+    };
+  </script>
+</body>
+</html>
