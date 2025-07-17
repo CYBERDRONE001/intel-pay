@@ -6,58 +6,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col">
+<body class="bg-gray-900 text-white min-h-screen p-6 flex flex-col items-center">
 
-  <!-- Top Navbar -->
-  <header class="bg-gray-800 px-4 py-3 flex items-center justify-between shadow-md">
-    <h1 class="text-xl font-bold">💰 IntelPay</h1>
-    <nav class="space-x-4 hidden md:block">
-      <a href="dashboard.html" class="hover:text-blue-400">Dashboard</a>
-      <a href="withdraw.html" class="hover:text-blue-400">Withdraw</a>
-      <a href="#" id="logoutBtn" class="hover:text-red-400">Logout</a>
-    </nav>
-  </header>
+  <h1 class="text-2xl font-bold mb-2">👥 Invite & Earn</h1>
+  <p class="text-gray-400 text-center mb-6">Share your referral link with friends and earn bonuses!</p>
 
-  <div class="flex flex-1">
-    <!-- Sidebar -->
-    <aside class="bg-gray-800 w-48 p-4 hidden md:block">
-      <ul class="space-y-4">
-        <li><a href="dashboard.html" class="block hover:text-blue-400">🏠 Overview</a></li>
-        <li><a href="withdraw.html" class="block hover:text-blue-400">💸 Withdraw</a></li>
-        <li><a href="invite.html" class="block hover:text-blue-400">👥 Invite & Earn</a></li>
-        <li><a href="support.html" class="block hover:text-blue-400">📞 Support</a></li>
-        <li><a href="#" id="logoutSidebar" class="block hover:text-red-400">🚪 Logout</a></li>
-      </ul>
-    </aside>
+  <div class="bg-gray-800 p-6 rounded w-full max-w-lg text-center space-y-4">
+    <p class="text-sm">Your referral link:</p>
+    <input type="text" id="refLink" readonly class="w-full p-2 text-center bg-gray-700 rounded text-sm font-mono" />
+    <img id="qrImage" class="mx-auto mt-4" alt="QR Code" />
 
-    <!-- Main Section -->
-    <main class="flex-1 p-6">
-      <h2 class="text-2xl font-bold mb-4">👥 Invite Friends & Earn</h2>
-      <p class="mb-4 text-gray-300">Share your unique referral link to earn bonus when your friends join IntelPay.</p>
-
-      <div class="bg-gray-800 p-4 rounded shadow-md max-w-xl">
-        <div class="mb-4">
-          <label class="text-sm text-gray-400">Your Referral Link:</label>
-          <input type="text" id="refLink" readonly class="w-full p-2 mt-1 bg-gray-700 rounded" />
-        </div>
-
-        <div class="mb-4 flex justify-center">
-          <img id="qrCode" alt="QR Code" class="w-40 h-40 rounded" />
-        </div>
-
-        <div class="space-x-2 text-center">
-          <a id="waShare" target="_blank" class="inline-block bg-green-600 px-3 py-1 rounded">WhatsApp</a>
-          <a id="fbShare" target="_blank" class="inline-block bg-blue-600 px-3 py-1 rounded">Facebook</a>
-          <a id="twShare" target="_blank" class="inline-block bg-sky-500 px-3 py-1 rounded">Twitter</a>
-        </div>
-      </div>
-    </main>
+    <div class="flex justify-center gap-4 mt-4 flex-wrap">
+      <a id="whatsapp" target="_blank" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">WhatsApp</a>
+      <a id="facebook" target="_blank" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">Facebook</a>
+      <a id="twitter" target="_blank" class="bg-cyan-500 hover:bg-cyan-600 px-4 py-2 rounded">Twitter</a>
+    </div>
   </div>
+
+  <a href="dashboard.html" class="text-blue-400 text-sm mt-6 underline">← Back to Dashboard</a>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import {
-      getAuth, onAuthStateChanged, signOut
+      getAuth, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 
     const firebaseConfig = {
@@ -72,28 +43,18 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    const baseURL = "https://intel-pay.netlify.app/register.html?ref=";
-
     onAuthStateChanged(auth, (user) => {
       if (!user) return location.href = "login.html";
-
-      const refLink = baseURL + user.uid;
-      document.getElementById("refLink").value = refLink;
-
-      // Generate QR code from API
-      document.getElementById("qrCode").src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(refLink)}`;
+      const uid = user.uid;
+      const link = `https://intel-pay.netlify.app/register.html?ref=${uid}`;
+      document.getElementById("refLink").value = link;
+      document.getElementById("qrImage").src = `https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=${encodeURIComponent(link)}`;
 
       // Share links
-      document.getElementById("waShare").href = `https://wa.me/?text=Join%20IntelPay%20and%20earn%20crypto!%20${encodeURIComponent(refLink)}`;
-      document.getElementById("fbShare").href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(refLink)}`;
-      document.getElementById("twShare").href = `https://twitter.com/intent/tweet?text=Join%20IntelPay%20and%20earn!%20${encodeURIComponent(refLink)}`;
+      document.getElementById("whatsapp").href = `https://wa.me/?text=Join%20IntelPay:%20${encodeURIComponent(link)}`;
+      document.getElementById("facebook").href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`;
+      document.getElementById("twitter").href = `https://twitter.com/intent/tweet?text=Earn%20daily%20with%20IntelPay!%20Join%20here:%20${encodeURIComponent(link)}`;
     });
-
-    document.getElementById("logoutBtn").onclick =
-    document.getElementById("logoutSidebar").onclick = async () => {
-      await signOut(auth);
-      location.href = "login.html";
-    };
   </script>
 </body>
 </html>
