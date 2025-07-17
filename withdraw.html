@@ -14,13 +14,12 @@
   <!-- EmailJS SDK -->
   <script type="text/javascript" src="https://cdn.emailjs.com/dist/email.min.js"></script>
   <script>
-    (function() {
-      emailjs.init("yBlAJJLYdBASSoVK8"); // 🔁 Replace this
+    (function () {
+      emailjs.init("yBlAJJLYdBASSoVK8"); // ✅ Your public key
     })();
   </script>
 </head>
 <body class="bg-gray-900 text-white min-h-screen p-4">
-
   <div class="max-w-lg mx-auto bg-gray-800 p-6 rounded-lg shadow-lg">
     <h2 class="text-2xl font-bold mb-4 text-center">💸 Withdraw Request</h2>
 
@@ -65,6 +64,7 @@
         const bank = document.getElementById("bank").value;
         const account = document.getElementById("account").value;
         const amount = parseFloat(document.getElementById("amount").value);
+        const date = new Date().toLocaleString();
 
         if (amount > 5500) {
           alert("❌ You can only withdraw up to ₦5500.");
@@ -84,12 +84,12 @@
         });
 
         // Send EmailJS notification
-        emailjs.send("service_h46ycvt", "template_ezkjhnj", {
+        emailjs.send("service_h46ycvt", "template_e8hr7vj", {
           user_email: user.email,
-          user_name: name,
+          full_name: name,
           bank_name: bank,
           account_number: account,
-          amount: amount
+          date: date
         })
         .then(() => {
           statusMsg.innerText = "✅ Withdrawal submitted & admin notified!";
