@@ -3,22 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <title>Register – IntelPay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center px-4">
-  <form id="registerForm" class="bg-gray-800 p-6 rounded shadow-md w-full max-w-md space-y-4">
-    <h2 class="text-2xl font-bold text-center">Create an Account</h2>
-    <input type="text" id="name" placeholder="Full Name" required class="w-full p-2 rounded bg-gray-700" />
-    <input type="email" id="email" placeholder="Email" required class="w-full p-2 rounded bg-gray-700" />
-    <input type="password" id="password" placeholder="Password" required class="w-full p-2 rounded bg-gray-700" />
-    <button type="submit" class="bg-blue-600 w-full p-2 rounded">Register</button>
-    <p class="text-sm text-center">Already have an account? <a href="login.html" class="text-blue-400">Login</a></p>
-  </form>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+  <div class="bg-gray-800 p-6 rounded shadow-md w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-4 text-center">Create IntelPay Account</h2>
+    <form id="registerForm" class="space-y-4">
+      <input type="text" id="name" placeholder="Full Name" required class="w-full p-2 rounded bg-gray-700" />
+      <input type="email" id="email" placeholder="Email" required class="w-full p-2 rounded bg-gray-700" />
+      <input type="password" id="password" placeholder="Password" required class="w-full p-2 rounded bg-gray-700" />
+      <button type="submit" class="bg-blue-600 w-full p-2 rounded">Register</button>
+    </form>
+    <p class="mt-4 text-sm text-gray-400 text-center">
+      Already have an account? <a href="login.html" class="text-blue-400">Login here</a>
+    </p>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import { getFirestore, setDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import {
+      getAuth, createUserWithEmailAndPassword, sendEmailVerification
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import {
+      getFirestore, doc, setDoc
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
@@ -40,20 +49,22 @@
       const password = e.target.password.value;
 
       try {
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
-        await sendEmailVerification(cred.user);
-        await setDoc(doc(db, "users", cred.user.uid), {
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCred.user;
+
+        await sendEmailVerification(user);
+        await setDoc(doc(db, "users", user.uid), {
           name,
           email,
+          uid: user.uid,
           earnings: 0,
-          activated: false,
-          createdAt: new Date()
+          daysActive: 0
         });
 
-        alert("Registration successful! Please check your email to verify your account.");
-        location.href = "login.html";
+        alert("✅ Account created! A verification email has been sent.");
+        e.target.reset();
       } catch (err) {
-        alert("Registration error: " + err.message);
+        alert("❌ " + err.message);
       }
     });
   </script>
