@@ -3,23 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <title>Login – IntelPay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center px-4">
-  <form id="loginForm" class="bg-gray-800 p-6 rounded shadow-md w-full max-w-md space-y-4">
-    <h2 class="text-2xl font-bold text-center">Welcome Back</h2>
-    <input type="email" id="email" placeholder="Email" required class="w-full p-2 rounded bg-gray-700" />
-    <input type="password" id="password" placeholder="Password" required class="w-full p-2 rounded bg-gray-700" />
-    <button type="submit" class="bg-blue-600 w-full p-2 rounded">Login</button>
-    <p class="text-sm text-center mt-2">
-      <a href="forgot-password.html" class="text-blue-400">Forgot Password?</a>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+  <div class="bg-gray-800 p-6 rounded shadow-md w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-4 text-center">Login to IntelPay</h2>
+    <form id="loginForm" class="space-y-4">
+      <input type="email" id="email" placeholder="Email" required class="w-full p-2 rounded bg-gray-700" />
+      <input type="password" id="password" placeholder="Password" required class="w-full p-2 rounded bg-gray-700" />
+      <button type="submit" class="bg-blue-600 w-full p-2 rounded">Login</button>
+    </form>
+    <p class="mt-4 text-sm text-gray-400 text-center">
+      Don't have an account? <a href="register.html" class="text-blue-400">Register here</a>
     </p>
-    <p class="text-sm text-center">Don't have an account? <a href="register.html" class="text-blue-400">Register</a></p>
-  </form>
+    <p class="mt-2 text-sm text-gray-400 text-center">
+      <a href="#" id="forgotPass" class="text-yellow-400">Forgot password?</a>
+    </p>
+  </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import {
+      getAuth, signInWithEmailAndPassword, sendPasswordResetEmail
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
@@ -39,19 +46,28 @@
       const password = e.target.password.value;
 
       try {
-        const cred = await signInWithEmailAndPassword(auth, email, password);
-
-        if (!cred.user.emailVerified) {
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        if (!userCred.user.emailVerified) {
           alert("⚠️ Please verify your email before logging in.");
           return;
         }
-
-        alert("Login successful!");
         location.href = "dashboard.html";
       } catch (err) {
-        alert("Login error: " + err.message);
+        alert("❌ " + err.message);
       }
     });
+
+    document.getElementById("forgotPass").onclick = async () => {
+      const email = prompt("Enter your registered email:");
+      if (!email) return;
+
+      try {
+        await sendPasswordResetEmail(auth, email);
+        alert("✅ Reset email sent. Please check your inbox.");
+      } catch (err) {
+        alert("❌ " + err.message);
+      }
+    };
   </script>
 </body>
 </html>
