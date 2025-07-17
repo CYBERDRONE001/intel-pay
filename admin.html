@@ -2,67 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin Panel – IntelPay</title>
+  <title>Admin Dashboard – IntelPay</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col">
+<body class="bg-gray-900 text-white p-6">
 
-  <!-- Top Navbar -->
-  <header class="bg-gray-800 px-4 py-3 flex items-center justify-between shadow-md">
-    <h1 class="text-xl font-bold">🛡️ IntelPay Admin</h1>
-    <nav class="space-x-4 hidden md:block">
-      <a href="admin.html" class="hover:text-blue-400">Users</a>
-      <a href="#withdrawals" class="hover:text-blue-400">Withdrawals</a>
-      <a href="#" id="logoutBtn" class="hover:text-red-400">Logout</a>
-    </nav>
-  </header>
+  <h1 class="text-3xl font-bold mb-6 text-center">👨‍💼 IntelPay Admin Dashboard</h1>
 
-  <div class="flex flex-1">
-    <!-- Sidebar -->
-    <aside class="bg-gray-800 w-48 p-4 hidden md:block">
-      <ul class="space-y-4">
-        <li><a href="admin.html" class="block hover:text-blue-400">👤 All Users</a></li>
-        <li><a href="#withdrawals" class="block hover:text-blue-400">💸 Withdrawals</a></li>
-        <li><a href="#" id="logoutSidebar" class="block hover:text-red-400">🚪 Logout</a></li>
-      </ul>
-    </aside>
+  <!-- Analytics Overview -->
+  <div class="grid md:grid-cols-3 gap-6 mb-6">
+    <div class="bg-gray-800 p-4 rounded">
+      <h2 class="text-lg font-semibold mb-2">📈 Total Users</h2>
+      <p id="userCount" class="text-2xl font-bold">0</p>
+    </div>
+    <div class="bg-gray-800 p-4 rounded">
+      <h2 class="text-lg font-semibold mb-2">💰 Total Earnings</h2>
+      <p id="totalEarnings" class="text-2xl font-bold">₦0</p>
+    </div>
+    <div class="bg-gray-800 p-4 rounded">
+      <h2 class="text-lg font-semibold mb-2">🧾 Withdraw Requests</h2>
+      <p id="withdrawCount" class="text-2xl font-bold">0</p>
+    </div>
+  </div>
 
-    <!-- Main Section -->
-    <main class="flex-1 p-6 space-y-8">
-      <h2 class="text-2xl font-bold">👥 Registered Users</h2>
-      <table class="w-full bg-gray-800 rounded overflow-hidden text-sm">
-        <thead class="bg-gray-700 text-left text-gray-400">
-          <tr>
-            <th class="p-2">Name</th>
-            <th class="p-2">Email</th>
-            <th class="p-2">Earnings</th>
-            <th class="p-2">Days</th>
-          </tr>
-        </thead>
-        <tbody id="userTable" class="text-gray-300"></tbody>
-      </table>
+  <!-- Chart -->
+  <canvas id="analyticsChart" class="bg-gray-800 p-4 rounded max-w-4xl mx-auto mb-10"></canvas>
 
-      <h2 id="withdrawals" class="text-2xl font-bold mt-8">💸 Withdrawal Requests</h2>
-      <table class="w-full bg-gray-800 rounded overflow-hidden text-sm">
-        <thead class="bg-gray-700 text-left text-gray-400">
-          <tr>
-            <th class="p-2">Name</th>
-            <th class="p-2">Bank</th>
-            <th class="p-2">Acct No</th>
-            <th class="p-2">Amount</th>
-            <th class="p-2">Status</th>
-          </tr>
-        </thead>
-        <tbody id="withdrawTable" class="text-gray-300"></tbody>
-      </table>
-    </main>
+  <!-- Pending Crypto Uploads -->
+  <div class="bg-gray-800 p-4 rounded mb-6">
+    <h2 class="text-xl font-bold mb-4">📤 Pending Crypto Proofs</h2>
+    <div id="cryptoList" class="space-y-4 text-sm"></div>
+  </div>
+
+  <!-- Export Button -->
+  <div class="text-center">
+    <button class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700" onclick="exportToSheet()">📥 Export to Google Sheet</button>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import {
-      getAuth, onAuthStateChanged, signOut
+      getAuth, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
     import {
       getFirestore, collection, getDocs
@@ -81,52 +63,69 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const adminEmail = "aliuabdulwajud070@gmail.com"; // Replace with your admin email
+    // Only allow admin
+    const adminEmail = "aliuabdulwajud070@gmail.com"; // 🔁 Replace with your real admin email
 
     onAuthStateChanged(auth, async (user) => {
       if (!user || user.email !== adminEmail) {
-        alert("Unauthorized access.");
-        location.href = "login.html";
-        return;
+        alert("Unauthorized. Only admins allowed.");
+        return location.href = "login.html";
       }
 
-      // Load Users
       const usersSnap = await getDocs(collection(db, "users"));
-      const userTable = document.getElementById("userTable");
+      const withdrawalsSnap = await getDocs(collection(db, "withdrawals"));
+
+      let total = 0;
+      let cryptoProofs = [];
       usersSnap.forEach(doc => {
-        const d = doc.data();
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class="p-2">${d.name || "—"}</td>
-          <td class="p-2">${d.email}</td>
-          <td class="p-2">₦${(d.earnings || 0).toFixed(2)}</td>
-          <td class="p-2">${d.daysActive || 0}</td>
-        `;
-        userTable.appendChild(tr);
+        const data = doc.data();
+        total += parseFloat(data.earnings || 0);
+        if (data.paymentMethod === "Crypto" && data.proofStatus === "Pending") {
+          cryptoProofs.push({ email: data.email, link: data.cryptoProof });
+        }
       });
 
-      // Load Withdrawals
-      const withdrawSnap = await getDocs(collection(db, "withdrawals"));
-      const withdrawTable = document.getElementById("withdrawTable");
-      withdrawSnap.forEach(doc => {
-        const d = doc.data();
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class="p-2">${d.name}</td>
-          <td class="p-2">${d.bank}</td>
-          <td class="p-2">${d.account}</td>
-          <td class="p-2">₦${d.amount}</td>
-          <td class="p-2">${d.status}</td>
-        `;
-        withdrawTable.appendChild(tr);
+      document.getElementById("userCount").innerText = usersSnap.size;
+      document.getElementById("totalEarnings").innerText = "₦" + total.toFixed(2);
+      document.getElementById("withdrawCount").innerText = withdrawalsSnap.size;
+
+      // Render chart
+      new Chart(document.getElementById("analyticsChart"), {
+        type: "bar",
+        data: {
+          labels: ["Users", "Withdrawals"],
+          datasets: [{
+            label: "IntelPay Stats",
+            data: [usersSnap.size, withdrawalsSnap.size],
+            backgroundColor: ["#3b82f6", "#f59e0b"]
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: "User vs Withdrawals" }
+          }
+        }
       });
+
+      // Show crypto screenshots
+      const listDiv = document.getElementById("cryptoList");
+      if (cryptoProofs.length === 0) {
+        listDiv.innerHTML = "<p class='text-gray-400'>No pending crypto uploads.</p>";
+      } else {
+        cryptoProofs.forEach(p => {
+          const item = document.createElement("div");
+          item.innerHTML = `<strong>${p.email}</strong><br/><a href="${p.link}" target="_blank" class="text-blue-400 underline">View Screenshot</a>`;
+          listDiv.appendChild(item);
+        });
+      }
     });
 
-    document.getElementById("logoutBtn").onclick =
-    document.getElementById("logoutSidebar").onclick = async () => {
-      await signOut(auth);
-      location.href = "login.html";
-    };
+    // Export to sheet placeholder
+    function exportToSheet() {
+      alert("🧾 Export to Google Sheets will be added in a future update.");
+    }
   </script>
 </body>
 </html>
