@@ -99,9 +99,9 @@
     // PAYSTACK PAYMENT
     window.payWithPaystack = () => {
       const handler = PaystackPop.setup({
-        key: "pk_live_725e9c0357625ec847ec27b37e4d1033ac90a718", // 🔁 Replace with your Paystack public key
+        key: "pk_live_725e9c0357625ec847ec27b37e4d1033ac90a718", // ✅ Your live key
         email: currentUser.email,
-        amount: 5500, // ₦5500 in Kobo
+        amount: 550000, // ₦5500 in Kobo
         currency: "NGN",
         callback: async function (response) {
           await setDoc(doc(db, "payments", currentUser.uid), {
@@ -122,7 +122,7 @@
     // FLUTTERWAVE PAYMENT
     window.payWithFlutterwave = () => {
       FlutterwaveCheckout({
-        public_key: "FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxx-X", // 🔁 Replace with your Flutterwave public key
+        public_key: "FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxxx-X", // 🔁 Replace this with your Flutterwave public key
         tx_ref: "INTELPAY_" + Date.now(),
         amount: 5500,
         currency: "NGN",
