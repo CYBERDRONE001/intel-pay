@@ -6,22 +6,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex flex-col">
+<body class="bg-gray-900 text-white">
 
-  <!-- Top Navbar -->
-  <header class="bg-gray-800 px-4 py-3 flex items-center justify-between shadow-md">
-    <h1 class="text-xl font-bold">💼 IntelPay Dashboard</h1>
-    <nav class="space-x-4 hidden md:block">
-      <a href="dashboard.html" class="hover:text-blue-400">Dashboard</a>
-      <a href="withdraw.html" class="hover:text-blue-400">Withdraw</a>
-      <a href="invite.html" class="hover:text-blue-400">Invite</a>
-      <a href="support.html" class="hover:text-blue-400">Support</a>
-      <a href="#" id="logoutBtn" class="hover:text-red-400">Logout</a>
-    </nav>
-  </header>
+<!-- Top Navigation -->
+<nav class="bg-gray-800 w-full fixed top-0 z-50 shadow-md">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+    <h1 class="text-white text-lg font-bold">💰 IntelPay</h1>
+    <div class="space-x-4 hidden md:flex">
+      <a href="dashboard.html" class="text-white hover:text-blue-400">Dashboard</a>
+      <a href="pay.html" class="text-white hover:text-blue-400">Pay</a>
+      <a href="invite.html" class="text-white hover:text-blue-400">Invite</a>
+      <a href="support.html" class="text-white hover:text-blue-400">Support</a>
+    </div>
+    <button onclick="document.getElementById('mobileNav').classList.toggle('hidden')" class="md:hidden text-white">
+      ☰
+    </button>
+  </div>
+</nav>
 
-<div class="flex min-h-screen bg-gray-900 text-white">
+<div id="mobileNav" class="bg-gray-800 mt-14 w-full text-center py-2 space-y-2 md:hidden hidden fixed z-40">
+  <a href="dashboard.html" class="block text-white hover:text-blue-400">Dashboard</a>
+  <a href="pay.html" class="block text-white hover:text-blue-400">Pay</a>
+  <a href="invite.html" class="block text-white hover:text-blue-400">Invite</a>
+  <a href="support.html" class="block text-white hover:text-blue-400">Support</a>
+</div>
+<div class="pt-24"></div>
 
+<!-- Page Layout -->
+<div class="flex min-h-screen">
   <!-- Sidebar -->
   <aside class="w-64 bg-gray-800 hidden md:block p-4 space-y-4 fixed h-full">
     <h2 class="text-xl font-bold mb-4">🧭 Navigation</h2>
@@ -34,115 +46,73 @@
     </nav>
   </aside>
 
-  <!-- Main Content -->
+  <!-- Dashboard -->
   <main class="flex-1 ml-0 md:ml-64 p-6">
-    <!-- Your dashboard content goes here -->
-    <h1 class="text-2xl font-bold">Welcome to IntelPay Dashboard</h1>
-    <p class="text-gray-400">Your balance, earnings, and stats will appear here...</p>
+    <h1 class="text-2xl font-bold mb-4">🎉 Welcome Back</h1>
+
+    <div class="bg-gray-800 p-6 rounded-lg mb-6">
+      <p class="text-lg">Your Earnings:</p>
+      <h2 id="earnings" class="text-3xl font-bold text-green-400">₦0</h2>
+      <p class="text-sm text-gray-400 mt-2" id="statusText">Checking payment status...</p>
+    </div>
+
+    <button onclick="logout()" class="bg-red-500 px-4 py-2 rounded hover:bg-red-600">Logout</button>
   </main>
 </div>
 
-  <div class="flex flex-1">
-    <!-- Sidebar -->
-    <aside class="bg-gray-800 w-48 p-4 hidden md:block">
-      <ul class="space-y-4">
-        <li><a href="dashboard.html" class="block hover:text-blue-400">🏠 Home</a></li>
-        <li><a href="withdraw.html" class="block hover:text-blue-400">💸 Withdraw</a></li>
-        <li><a href="invite.html" class="block hover:text-blue-400">👥 Invite</a></li>
-        <li><a href="support.html" class="block hover:text-blue-400">📞 Support</a></li>
-        <li><a href="#" id="logoutSidebar" class="block hover:text-red-400">🚪 Logout</a></li>
-      </ul>
-    </aside>
+<!-- Firebase Scripts -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+  import {
+    getAuth, onAuthStateChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, updateDoc
+  } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
-    <!-- Main Dashboard -->
-    <main class="flex-1 p-6 space-y-6">
-      <h2 class="text-2xl font-bold">Welcome, <span id="username">User</span> 👋</h2>
-      <p class="text-sm text-gray-400">Your current earnings will grow 4% daily (after activation) up to ₦5500.</p>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
+    authDomain: "intel-pay-ltd.firebaseapp.com",
+    projectId: "intel-pay-ltd",
+    storageBucket: "intel-pay-ltd.appspot.com",
+    messagingSenderId: "779411397815",
+    appId: "1:779411397815:web:7b6d9f34572d13a833c132"
+  };
 
-      <div class="bg-gray-800 p-6 rounded shadow-md">
-        <h3 class="text-lg font-semibold mb-2">💰 Current Balance</h3>
-        <div class="text-3xl font-bold mb-1">₦<span id="balance">0.00</span></div>
-        <div class="h-3 bg-gray-700 rounded-full overflow-hidden">
-          <div id="progress" class="bg-green-500 h-full transition-all duration-700" style="width: 0%"></div>
-        </div>
-      </div>
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-      <div class="bg-gray-800 p-6 rounded shadow-md">
-        <h3 class="text-lg font-semibold mb-2">⏱️ Days Active</h3>
-        <p class="text-xl" id="daysActive">0</p>
-      </div>
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) return location.href = "login.html";
 
-      <div class="text-sm text-gray-500">
-        ⚠️ If you haven’t paid ₦5500 to activate, earnings will not increase.<br>
-        You can pay via <a href="pay.html" class="text-blue-400 underline">Paystack</a>, Flutterwave or upload crypto proof.
-      </div>
-    </main>
-  </div>
+    const uid = user.uid;
+    const userRef = doc(db, "users", uid);
+    const userSnap = await getDoc(userRef);
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import {
-      getAuth, onAuthStateChanged, signOut
-    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import {
-      getFirestore, doc, getDoc, updateDoc, increment
-    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    if (!userSnap.exists()) return alert("User not found");
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
-      authDomain: "intel-pay-ltd.firebaseapp.com",
-      projectId: "intel-pay-ltd",
-      storageBucket: "intel-pay-ltd.appspot.com",
-      messagingSenderId: "779411397815",
-      appId: "1:779411397815:web:7b6d9f34572d13a833c132"
-    };
+    const userData = userSnap.data();
+    let earnings = userData.earnings || 0;
+    const joined = userData.joinDate || new Date().toISOString();
+    const hasPaid = userData.hasPaid === true;
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    // Auto-increase 4% earnings every login
+    if (hasPaid && earnings < 5500) {
+      earnings = +(earnings * 1.04).toFixed(2);
+      if (earnings > 5500) earnings = 5500;
+      await updateDoc(userRef, { earnings });
+    }
 
-    let currentUser;
-    const MAX_EARN = 5500;
+    document.getElementById("earnings").innerText = `₦${earnings.toFixed(2)}`;
+    document.getElementById("statusText").innerText = hasPaid
+      ? "You are an active investor. Earnings will grow daily!"
+      : "Activate your account by paying ₦5500 to start earning.";
+  });
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) return location.href = "login.html";
-      currentUser = user;
-      const userRef = doc(db, "users", user.uid);
-      const snap = await getDoc(userRef);
-
-      if (!snap.exists()) return alert("No user data found.");
-
-      const userData = snap.data();
-      document.getElementById("username").textContent = userData.name || "User";
-      document.getElementById("balance").textContent = (userData.earnings || 0).toFixed(2);
-      document.getElementById("daysActive").textContent = userData.daysActive || 0;
-
-      const progress = Math.min(100, (userData.earnings / MAX_EARN) * 100);
-      document.getElementById("progress").style.width = progress + "%";
-
-      // Earnings logic
-      const today = new Date().toDateString();
-      if (userData.lastLogin !== today && userData.activated === true) {
-        const current = userData.earnings || 0;
-        const next = Math.min(MAX_EARN, current + current * 0.04);
-
-        await updateDoc(userRef, {
-          earnings: next,
-          daysActive: increment(1),
-          lastLogin: today
-        });
-
-        document.getElementById("balance").textContent = next.toFixed(2);
-        document.getElementById("progress").style.width = Math.min(100, (next / MAX_EARN) * 100) + "%";
-        document.getElementById("daysActive").textContent = (userData.daysActive || 0) + 1;
-      }
-    });
-
-    document.getElementById("logoutBtn").onclick =
-    document.getElementById("logoutSidebar").onclick = async () => {
-      await signOut(auth);
-      location.href = "login.html";
-    };
-  </script>
+  function logout() {
+    signOut(auth).then(() => location.href = "login.html");
+  }
+</script>
 </body>
 </html>
