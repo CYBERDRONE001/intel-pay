@@ -2,27 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Register – IntelPay</title>
+  <title>IntelPay – Register</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen px-4">
 
-  <div class="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md">
-    <h2 class="text-2xl font-bold mb-4 text-center">🔐 Create an Account</h2>
+  <div class="bg-gray-800 p-6 rounded-lg w-full max-w-md shadow-lg animate-fade-in">
+    <h2 class="text-2xl font-bold text-center mb-4">🚀 Create IntelPay Account</h2>
 
     <form id="registerForm" class="space-y-4">
-      <input type="email" id="email" placeholder="Email" required class="w-full p-2 rounded bg-gray-700" />
-      <input type="password" id="password" placeholder="Password" required class="w-full p-2 rounded bg-gray-700" />
-      <input type="text" id="fullName" placeholder="Full Name" required class="w-full p-2 rounded bg-gray-700" />
-      <button type="submit" class="w-full bg-green-600 py-2 rounded hover:bg-green-700">Register</button>
+      <input type="email" id="email" placeholder="Email" required class="w-full p-2 bg-gray-700 rounded" />
+      <input type="password" id="password" placeholder="Password" required class="w-full p-2 bg-gray-700 rounded" />
+      <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded">
+        Register & Start Earning
+      </button>
     </form>
 
-    <p class="mt-4 text-center text-sm text-gray-400">
-      Already have an account? <a href="login.html" class="text-blue-400">Login</a>
+    <p class="text-sm text-center mt-4">Already have an account? 
+      <a href="login.html" class="text-blue-400 underline">Login here</a>
     </p>
   </div>
 
+  <!-- Firebase SDK & Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import {
@@ -45,35 +47,44 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Get ?ref=xxx from URL
+    const form = document.getElementById("registerForm");
+
     const urlParams = new URLSearchParams(window.location.search);
-    const referrerId = urlParams.get("ref");
+    const referrer = urlParams.get("ref");
 
-    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const fullName = document.getElementById("fullName").value.trim();
+      const email = form.email.value;
+      const password = form.password.value;
 
       try {
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
-        const uid = cred.user.uid;
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = userCred.user.uid;
 
         await setDoc(doc(db, "users", uid), {
           email,
-          fullName,
-          balance: 5500,  // Default balance after payment
+          balance: 5500,
           startDate: Date.now(),
-          referrer: referrerId || null
+          referrer: referrer || null
         });
 
-        alert("Registration successful!");
+        alert("Account created successfully!");
         window.location.href = "dashboard.html";
-      } catch (error) {
-        alert("Error: " + error.message);
+      } catch (err) {
+        alert("Error: " + err.message);
       }
     });
   </script>
+
+  <!-- Tailwind animation -->
+  <style>
+    .animate-fade-in {
+      animation: fade-in 0.5s ease-out;
+    }
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </body>
 </html>
