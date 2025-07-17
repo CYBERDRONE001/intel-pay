@@ -1,35 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Payment – IntelPay</title>
+  <meta charset="UTF-8" />
+  <title>Make Payment – IntelPay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Paystack and Flutterwave JS -->
   <script src="https://js.paystack.co/v1/inline.js"></script>
   <script src="https://checkout.flutterwave.com/v3.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-<body class="bg-gray-900 text-white p-6 min-h-screen">
-  <h2 class="text-2xl font-bold mb-6">Choose Your Payment Method</h2>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col items-center p-6">
 
-  <div class="space-y-4 max-w-xl">
-    <button id="paystackBtn" class="w-full bg-blue-600 p-4 rounded">Pay with Paystack</button>
-    <button id="flutterwaveBtn" class="w-full bg-purple-600 p-4 rounded">Pay with Flutterwave</button>
+  <h1 class="text-2xl font-bold mb-6">💳 Activate Account – ₦5500</h1>
 
-    <div class="bg-gray-800 p-4 rounded mt-6">
-      <h3 class="text-lg font-semibold mb-2">Crypto Payment</h3>
-      <p>Send payment to: <span class="text-green-400">bc1q-your-wallet-address</span></p>
-      <p>Upload your screenshot to <a href="https://imgbb.com" class="underline text-blue-400" target="_blank">imgbb.com</a> and paste the link:</p>
-      <input type="url" id="cryptoLink" placeholder="https://ibb.co/your-image" class="w-full p-2 mt-2 bg-gray-700 rounded" />
-      <button id="submitLink" class="mt-3 bg-green-600 p-2 rounded">Submit Screenshot</button>
-      <p class="text-green-400 mt-2 hidden" id="linkSaved">✅ Link submitted. Admin will verify.</p>
+  <div class="space-y-6 w-full max-w-lg">
+
+    <!-- Paystack Button -->
+    <button id="paystackBtn" class="w-full bg-green-600 hover:bg-green-700 py-3 rounded text-lg font-bold">Pay with Paystack</button>
+
+    <!-- Flutterwave Button -->
+    <button id="flutterBtn" class="w-full bg-purple-600 hover:bg-purple-700 py-3 rounded text-lg font-bold">Pay with Flutterwave</button>
+
+    <!-- Crypto Upload -->
+    <div class="bg-gray-800 p-4 rounded">
+      <h2 class="text-lg font-semibold mb-2">Pay with Crypto</h2>
+      <p class="text-sm text-gray-400 mb-2">Upload payment screenshot (after sending to our wallet)</p>
+      <input type="file" id="screenshot" accept="image/*" class="w-full bg-gray-700 p-2 rounded mb-2" />
+      <button id="uploadBtn" class="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded">Upload Screenshot</button>
     </div>
+
+    <a href="dashboard.html" class="text-blue-400 text-sm underline block text-center">← Back to Dashboard</a>
+
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import { getFirestore, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-    import { jsPDF } from "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    import {
+      getAuth, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import {
+      getFirestore, doc, updateDoc
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+    import {
+      getStorage, ref, uploadBytes, getDownloadURL
+    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
@@ -43,90 +57,82 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const storage = getStorage(app);
 
-    let user = null;
-    let userData = null;
+    let currentUser;
 
-    const paystackKey = "pk_test_xxxxxxxxxxxxx"; // ⚠️ Replace with your real key
-    const flutterwaveKey = "FLWPUBK_TEST-xxxxxxxxxxxxx"; // ⚠️ Replace with your real key
+    onAuthStateChanged(auth, user => {
+      if (!user) location.href = "login.html";
+      currentUser = user;
+    });
 
-    const generatePDFReceipt = (name, email, method, amount) => {
-      const doc = new jsPDF();
-      doc.setFontSize(16);
-      doc.text("IntelPay Payment Receipt", 20, 20);
-      doc.setFontSize(12);
-      doc.text(`Name: ${name}`, 20, 40);
-      doc.text(`Email: ${email}`, 20, 50);
-      doc.text(`Method: ${method}`, 20, 60);
-      doc.text(`Amount: ₦${amount}`, 20, 70);
-      doc.text(`Date: ${new Date().toLocaleString()}`, 20, 80);
-      doc.text("Thank you for investing with IntelPay.", 20, 100);
-      doc.save("IntelPay-Receipt.pdf");
+    // Paystack
+    document.getElementById("paystackBtn").onclick = () => {
+      const handler = PaystackPop.setup({
+        key: 'pk_live_725e9c0357625ec847ec27b37e4d1033ac90a718', // 🔁 Replace with your public key
+        email: currentUser.email,
+        amount: 550000, // Kobo
+        currency: "NGN",
+        callback: async (response) => {
+          await updateDoc(doc(db, "users", currentUser.uid), {
+            activated: true,
+            paymentMethod: "Paystack",
+            paymentRef: response.reference
+          });
+          alert("✅ Payment successful!");
+          location.href = "dashboard.html";
+        },
+        onClose: () => alert("❌ Payment cancelled.")
+      });
+      handler.openIframe();
     };
 
-    onAuthStateChanged(auth, async (_user) => {
-      if (!_user) return location.href = "login.html";
-      user = _user;
-      const snap = await getDoc(doc(db, "users", user.uid));
-      userData = snap.data();
-    });
-
-    document.getElementById("paystackBtn")?.addEventListener("click", () => {
-      const amount = userData.initialAmount * 100;
-
-      PaystackPop.setup({
-        key: paystackKey,
-        email: user.email,
-        amount: amount,
-        currency: "NGN",
-        callback: async (res) => {
-          await updateDoc(doc(db, "users", user.uid), {
-            activated: true,
-            activatedAt: new Date(),
-            paymentMethod: "Paystack",
-            transactionRef: res.reference
-          });
-          generatePDFReceipt(user.displayName || "User", user.email, "Paystack", userData.initialAmount);
-          alert("Payment successful!");
-          location.href = "dashboard.html";
-        }
-      }).openIframe();
-    });
-
-    document.getElementById("flutterwaveBtn")?.addEventListener("click", () => {
+    // Flutterwave
+    document.getElementById("flutterBtn").onclick = () => {
       FlutterwaveCheckout({
-        public_key: flutterwaveKey,
+        public_key: "FLWPUBK_TEST-xxxxxx", // 🔁 Replace with your Flutterwave key
         tx_ref: "INTELPAY_" + Date.now(),
-        amount: userData.initialAmount,
+        amount: 5500,
         currency: "NGN",
-        customer: { email: user.email },
-        callback: async function (response) {
-          await updateDoc(doc(db, "users", user.uid), {
-            activated: true,
-            activatedAt: new Date(),
-            paymentMethod: "Flutterwave",
-            transactionId: response.transaction_id
-          });
-          generatePDFReceipt(user.displayName || "User", user.email, "Flutterwave", userData.initialAmount);
-          alert("Payment successful!");
-          location.href = "dashboard.html";
-        }
+        customer: {
+          email: currentUser.email
+        },
+        callback: async (response) => {
+          if (response.status === "successful") {
+            await updateDoc(doc(db, "users", currentUser.uid), {
+              activated: true,
+              paymentMethod: "Flutterwave",
+              paymentRef: response.transaction_id
+            });
+            alert("✅ Payment successful!");
+            location.href = "dashboard.html";
+          }
+        },
+        onclose: () => alert("❌ Payment closed.")
       });
-    });
+    };
 
-    document.getElementById("submitLink")?.addEventListener("click", async () => {
-      const link = document.getElementById("cryptoLink").value;
-      if (!link.startsWith("http")) return alert("Enter valid image link");
+    // Upload crypto screenshot
+    document.getElementById("uploadBtn").onclick = async () => {
+      const file = document.getElementById("screenshot").files[0];
+      if (!file) return alert("Please select a screenshot.");
 
-      await updateDoc(doc(db, "users", user.uid), {
-        cryptoPaymentProof: link,
-        paymentMethod: "Crypto Screenshot",
-        activated: false
-      });
-
-      generatePDFReceipt(user.displayName || "User", user.email, "Crypto Screenshot", userData.initialAmount);
-      document.getElementById("linkSaved").classList.remove("hidden");
-    });
+      const storageRef = ref(storage, `crypto_proofs/${currentUser.uid}_${Date.now()}`);
+      try {
+        await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(storageRef);
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          activated: false,
+          paymentMethod: "Crypto",
+          cryptoProof: downloadURL,
+          proofStatus: "Pending"
+        });
+        alert("✅ Screenshot uploaded. Admin will verify shortly.");
+        location.href = "dashboard.html";
+      } catch (err) {
+        alert("❌ Upload failed: " + err.message);
+      }
+    };
   </script>
 </body>
 </html>
