@@ -2,33 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Admin – IntelPay</title>
+  <title>Admin Login – IntelPay</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen p-6">
+<body class="bg-gray-900 text-white flex items-center justify-center h-screen">
 
-  <h1 class="text-3xl font-bold text-center mb-6">🛡️ IntelPay Admin – Withdrawal Dashboard</h1>
+  <div class="bg-gray-800 p-8 rounded-lg w-full max-w-sm shadow-xl">
+    <h2 class="text-2xl font-bold mb-4 text-center">🔐 Admin Panel Login</h2>
 
-  <!-- 🔍 Search Bar + Export -->
-  <div class="max-w-4xl mx-auto mb-4 flex flex-col md:flex-row justify-between gap-4">
-    <input type="text" id="searchInput" placeholder="Search by email..." class="p-2 rounded w-full md:w-2/3 bg-gray-800 text-white">
-    <button id="exportBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white">📥 Export CSV</button>
+    <form id="adminLoginForm" class="space-y-4">
+      <input type="email" id="email" placeholder="Admin Email" required class="w-full p-3 bg-gray-700 rounded" />
+      <input type="password" id="password" placeholder="Password" required class="w-full p-3 bg-gray-700 rounded" />
+      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded font-bold">Login</button>
+    </form>
+
+    <p id="errorMsg" class="text-red-500 mt-4 text-center hidden">❌ Login failed or unauthorized.</p>
   </div>
 
-  <!-- 📋 Withdrawal Cards -->
-  <div id="withdrawals" class="grid gap-4 max-w-4xl mx-auto"></div>
-
-  <!-- 🔌 Firebase + Logic -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import {
-      getFirestore, collection, getDocs, doc, updateDoc
-    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-
+  <script>
+    // 🔧 Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
       authDomain: "intel-pay-ltd.firebaseapp.com",
@@ -37,79 +34,32 @@
       messagingSenderId: "779411397815",
       appId: "1:779411397815:web:7b6d9f34572d13a833c132"
     };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    // ✅ Admin Email
+    const adminEmail = "aliuabdulwajud070@gmail.com"; // ⬅️ Replace with your real admin email
 
-    const withdrawalsEl = document.getElementById("withdrawals");
-    const searchInput = document.getElementById("searchInput");
-    let allData = [];
+    document.getElementById("adminLoginForm").addEventListener("submit", function (e) {
+      e.preventDefault();
 
-    // ✅ Render Function
-    function render(data) {
-      withdrawalsEl.innerHTML = '';
-      if (data.length === 0) {
-        withdrawalsEl.innerHTML = "<p class='text-center text-gray-400'>No matching requests found.</p>";
-      }
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
 
-      data.forEach((item, i) => {
-        const statusColor = item.status === "processed" ? "text-green-400" : "text-yellow-400";
-        withdrawalsEl.innerHTML += `
-          <div class="bg-gray-800 rounded-lg p-4 shadow-md">
-            <p><strong>📧 Email:</strong> ${item.email}</p>
-            <p><strong>👤 Name:</strong> ${item.fullName}</p>
-            <p><strong>🏦 Bank:</strong> ${item.bankName}</p>
-            <p><strong>🔢 Account:</strong> ${item.accountNumber}</p>
-            <p><strong>🕒 Date:</strong> ${new Date(item.date).toLocaleString()}</p>
-            <p class="${statusColor}"><strong>Status:</strong> ${item.status || "pending"}</p>
-            ${item.status !== "processed" ? `<button onclick="markAsProcessed('${item.id}')" class="mt-2 bg-green-600 hover:bg-green-700 px-3 py-1 rounded">✅ Mark as Processed</button>` : ""}
-          </div>
-        `;
-      });
-    }
-
-    // ✅ Mark as Processed
-    window.markAsProcessed = async (id) => {
-      const ref = doc(db, "withdrawals", id);
-      await updateDoc(ref, { status: "processed" });
-      alert("Marked as processed ✅");
-      location.reload();
-    };
-
-    // ✅ Filter
-    searchInput.addEventListener("input", () => {
-      const val = searchInput.value.toLowerCase();
-      const filtered = allData.filter(item => item.email.toLowerCase().includes(val));
-      render(filtered);
-    });
-
-    // ✅ Export to CSV
-    document.getElementById("exportBtn").addEventListener("click", () => {
-      const csvRows = [
-        ["Email", "Full Name", "Bank", "Account", "Date", "Status"],
-        ...allData.map(d =>
-          [d.email, d.fullName, d.bankName, d.accountNumber, new Date(d.date).toLocaleString(), d.status || "pending"]
-        )
-      ];
-      const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
-      const link = document.createElement("a");
-      link.setAttribute("href", encodeURI(csvContent));
-      link.setAttribute("download", "withdrawals.csv");
-      link.click();
-    });
-
-    // ✅ Auth and Fetch
-    onAuthStateChanged(auth, async (user) => {
-      if (!user || user.email !== "aliuabdulwajud070@gmail.com") {
-        alert("Access denied.");
-        location.href = "login.html";
-        return;
-      }
-
-      const snapshot = await getDocs(collection(db, "withdrawals"));
-      allData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      render(allData);
+      auth.signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          const user = userCredential.user;
+          if (user.email === adminEmail) {
+            window.location.href = "admin-dashboard.html"; // ✅ Redirect to admin dashboard
+          } else {
+            auth.signOut();
+            document.getElementById("errorMsg").classList.remove("hidden");
+          }
+        })
+        .catch((error) => {
+          console.error(error.message);
+          document.getElementById("errorMsg").classList.remove("hidden");
+        });
     });
   </script>
 </body>
