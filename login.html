@@ -1,4 +1,3 @@
-<!-- login.html will be replaced with actual implementation -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,19 +5,21 @@
   <title>Login – IntelPay</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white h-screen flex items-center justify-center">
-  <form id="loginForm" class="bg-gray-800 p-6 rounded w-full max-w-md space-y-4">
-    <h2 class="text-2xl font-bold">Login</h2>
-    <input type="email" id="email" placeholder="Email" required class="w-full p-2 bg-gray-700 rounded" />
-    <input type="password" id="password" placeholder="Password" required class="w-full p-2 bg-gray-700 rounded" />
-    <button type="submit" class="w-full bg-blue-600 p-2 rounded">Login</button>
-    <p class="text-sm">Don’t have an account? <a href="register.html" class="text-green-400">Register</a></p>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center px-4">
+  <form id="loginForm" class="bg-gray-800 p-6 rounded shadow-md w-full max-w-md space-y-4">
+    <h2 class="text-2xl font-bold text-center">Welcome Back</h2>
+    <input type="email" id="email" placeholder="Email" required class="w-full p-2 rounded bg-gray-700" />
+    <input type="password" id="password" placeholder="Password" required class="w-full p-2 rounded bg-gray-700" />
+    <button type="submit" class="bg-blue-600 w-full p-2 rounded">Login</button>
+    <p class="text-sm text-center mt-2">
+      <a href="forgot-password.html" class="text-blue-400">Forgot Password?</a>
+    </p>
+    <p class="text-sm text-center">Don't have an account? <a href="register.html" class="text-blue-400">Register</a></p>
   </form>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
@@ -31,7 +32,6 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -39,17 +39,17 @@
       const password = e.target.password.value;
 
       try {
-        await signInWithEmailAndPassword(auth, email, password);
-        const snap = await getDoc(doc(db, "users", auth.currentUser.uid));
-        const data = snap.data();
+        const cred = await signInWithEmailAndPassword(auth, email, password);
 
-        if (data.admin === true) {
-          location.href = "admin-dashboard.html";
-        } else {
-          location.href = "dashboard.html";
+        if (!cred.user.emailVerified) {
+          alert("⚠️ Please verify your email before logging in.");
+          return;
         }
+
+        alert("Login successful!");
+        location.href = "dashboard.html";
       } catch (err) {
-        alert("Login failed: " + err.message);
+        alert("Login error: " + err.message);
       }
     });
   </script>
