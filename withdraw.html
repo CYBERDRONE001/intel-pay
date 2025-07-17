@@ -2,51 +2,40 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Withdraw – IntelPay</title>
+  <title>Withdraw Funds – IntelPay</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- ✅ EmailJS Script -->
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+  <!-- EmailJS SDK -->
+  <script type="text/javascript" src="https://cdn.emailjs.com/dist/email.min.js"></script>
   <script>
-    (function () {
-      emailjs.init("oGc09dmwjp7zI_JmV"); // 🔁 Replace with your actual PUBLIC KEY
+    (function() {
+      emailjs.init("YOUR_PUBLIC_KEY"); // 🔁 Replace this
     })();
   </script>
 </head>
-<body class="bg-gray-900 text-white p-6">
+<body class="bg-gray-900 text-white min-h-screen p-4">
 
-  <h1 class="text-2xl font-bold mb-6 text-center">💸 Withdrawal Request</h1>
+  <div class="max-w-lg mx-auto bg-gray-800 p-6 rounded-lg shadow-lg">
+    <h2 class="text-2xl font-bold mb-4 text-center">💸 Withdraw Request</h2>
 
-  <form id="withdrawForm" class="bg-gray-800 max-w-md mx-auto p-6 rounded space-y-4">
-    <div>
-      <label>Full Name</label>
-      <input type="text" id="fullName" required class="w-full p-2 rounded bg-gray-700 mt-1" />
-    </div>
-    <div>
-      <label>Bank Name</label>
-      <input type="text" id="bankName" required class="w-full p-2 rounded bg-gray-700 mt-1" />
-    </div>
-    <div>
-      <label>Account Number</label>
-      <input type="text" id="accountNumber" required class="w-full p-2 rounded bg-gray-700 mt-1" />
-    </div>
-    <button type="submit" class="bg-green-600 w-full py-2 rounded hover:bg-green-700">Submit Request</button>
-  </form>
+    <form id="withdrawForm" class="space-y-4">
+      <input type="text" id="name" placeholder="Your Full Name" required class="w-full p-3 rounded bg-gray-700 text-white" />
+      <input type="text" id="bank" placeholder="Bank Name" required class="w-full p-3 rounded bg-gray-700 text-white" />
+      <input type="text" id="account" placeholder="Account Number" required class="w-full p-3 rounded bg-gray-700 text-white" />
+      <input type="number" id="amount" placeholder="Amount to Withdraw (Max ₦5500)" max="5500" required class="w-full p-3 rounded bg-gray-700 text-white" />
+      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded font-bold">Request Withdrawal</button>
+    </form>
 
-  <p class="text-center text-sm text-green-400 mt-4 hidden" id="status">✅ Request sent!</p>
-  <a href="dashboard.html" class="block text-center text-blue-400 mt-6 underline">← Back to Dashboard</a>
+    <p id="statusMsg" class="mt-4 text-center text-sm"></p>
+  </div>
 
-  <!-- ✅ Firebase Integration -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-    import {
-      getAuth, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-    import {
-      getFirestore, collection, addDoc
-    } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDGdIsemWvuUTe7Df6iOK7suxMRC8G0vNg",
       authDomain: "intel-pay-ltd.firebaseapp.com",
@@ -56,50 +45,62 @@
       appId: "1:779411397815:web:7b6d9f34572d13a833c132"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
 
-    let userEmail = "";
+    const form = document.getElementById("withdrawForm");
+    const statusMsg = document.getElementById("statusMsg");
 
-    onAuthStateChanged(auth, (user) => {
-      if (!user) return location.href = "login.html";
-      userEmail = user.email;
-    });
-
-    document.getElementById("withdrawForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const fullName = document.getElementById("fullName").value;
-      const bankName = document.getElementById("bankName").value;
-      const accountNumber = document.getElementById("accountNumber").value;
-
-      try {
-        // Save withdrawal data to Firestore
-        await addDoc(collection(db, "withdrawals"), {
-          email: userEmail,
-          fullName,
-          bankName,
-          accountNumber,
-          date: new Date().toISOString()
-        });
-
-        // Send email using EmailJS
-        await emailjs.send("service_h46ycvt", "template_ezkjhnj", {
-          user_email: userEmail,
-          full_name: fullName,
-          bank_name: bankName,
-          account_number: accountNumber
-        });
-
-        document.getElementById("status").textContent = "✅ Withdrawal sent and email alert delivered!";
-        document.getElementById("status").classList.remove("hidden");
-        e.target.reset();
-
-      } catch (error) {
-        console.error("Error:", error);
-        alert("Something went wrong. Please try again.");
+    auth.onAuthStateChanged((user) => {
+      if (!user) {
+        alert("You must be logged in to withdraw.");
+        window.location.href = "login.html";
       }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById("name").value;
+        const bank = document.getElementById("bank").value;
+        const account = document.getElementById("account").value;
+        const amount = parseFloat(document.getElementById("amount").value);
+
+        if (amount > 5500) {
+          alert("❌ You can only withdraw up to ₦5500.");
+          return;
+        }
+
+        // Save to Firestore
+        await db.collection("withdrawals").add({
+          uid: user.uid,
+          email: user.email,
+          name,
+          bank,
+          account,
+          amount,
+          status: "pending",
+          requestedAt: Date.now()
+        });
+
+        // Send EmailJS notification
+        emailjs.send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", {
+          user_email: user.email,
+          user_name: name,
+          bank_name: bank,
+          account_number: account,
+          amount: amount
+        })
+        .then(() => {
+          statusMsg.innerText = "✅ Withdrawal submitted & admin notified!";
+        })
+        .catch((error) => {
+          console.error("EmailJS error:", error);
+          statusMsg.innerText = "⚠️ Submitted but failed to email admin.";
+        });
+
+        form.reset();
+      });
     });
   </script>
 </body>
