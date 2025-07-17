@@ -101,7 +101,7 @@
       const handler = PaystackPop.setup({
         key: "pk_live_725e9c0357625ec847ec27b37e4d1033ac90a718", // 🔁 Replace with your Paystack public key
         email: currentUser.email,
-        amount: 550000, // ₦5500 in Kobo
+        amount: 5500, // ₦5500 in Kobo
         currency: "NGN",
         callback: async function (response) {
           await setDoc(doc(db, "payments", currentUser.uid), {
