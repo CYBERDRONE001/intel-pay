@@ -5,21 +5,34 @@
   <title>IntelPay – Make Payment</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+  <script src="https://checkout.flutterwave.com/v3.js"></script>
 </head>
 <body class="bg-gray-900 text-white p-4">
 
   <div class="max-w-md mx-auto bg-gray-800 rounded-lg p-6 shadow-lg">
     <h2 class="text-2xl font-bold mb-4 text-center">💳 Activate Your Account – ₦5500</h2>
 
-    <!-- Payment Buttons -->
-    <div class="space-y-3 mb-6">
-      <button onclick="payWithPaystack()" class="w-full bg-green-600 hover:bg-green-700 p-3 rounded">Pay with Paystack</button>
-      <button onclick="payWithFlutterwave()" class="w-full bg-yellow-500 hover:bg-yellow-600 p-3 rounded">Pay with Flutterwave</button>
+    <!-- Paystack -->
+    <button onclick="payWithPaystack()" class="w-full bg-green-600 hover:bg-green-700 p-3 mb-3 rounded">
+      Pay with Paystack
+    </button>
+
+    <!-- Flutterwave -->
+    <button onclick="payWithFlutterwave()" class="w-full bg-yellow-500 hover:bg-yellow-600 p-3 mb-5 rounded">
+      Pay with Flutterwave
+    </button>
+
+    <!-- Crypto Wallets -->
+    <h3 class="text-lg font-bold mb-2">🪙 Pay with Crypto</h3>
+    <div class="bg-gray-700 p-3 rounded space-y-2 text-sm mb-4">
+      <p><strong>LTC:</strong> <span class="text-green-400">ltc1qexampleaddress</span></p>
+      <p><strong>BNB:</strong> <span class="text-yellow-400">bnb1exampleaddress</span></p>
+      <p><strong>DOGE:</strong> <span class="text-pink-400">DExampleDogecoinAddress</span></p>
+      <p class="text-gray-400">Send ₦5500 worth and upload proof below:</p>
     </div>
 
-    <!-- Crypto Upload -->
-    <h3 class="text-lg font-bold mb-2">🪙 Pay with Crypto (Upload Screenshot)</h3>
-    <h2> Litecoin Address:- 
+    <!-- Upload Screenshot -->
     <form id="screenshotForm" class="space-y-3">
       <input type="file" id="screenshot" required class="w-full p-2 bg-gray-700 rounded text-white" />
       <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 p-2 rounded">Upload Screenshot</button>
@@ -55,10 +68,9 @@
     const db = getFirestore(app);
     const storage = getStorage(app);
 
+    let currentUser;
     const form = document.getElementById("screenshotForm");
     const statusMsg = document.getElementById("statusMsg");
-
-    let currentUser;
 
     onAuthStateChanged(auth, (user) => {
       if (!user) return window.location.href = "login.html";
@@ -81,13 +93,59 @@
         timestamp: Date.now()
       });
 
-      statusMsg.innerHTML = "✅ Screenshot uploaded successfully! Waiting for admin verification.";
+      statusMsg.innerHTML = "✅ Screenshot uploaded! Admin will verify shortly.";
     });
 
-    // Placeholder: Replace with real Paystack/Flutterwave later
-    window.payWithPaystack = () => alert("pk_live_725e9c0357625ec847ec27b37e4d1033ac90a718");
-    window.payWithFlutterwave = () => alert("Integrate Flutterwave here.");
-  </script>
+    // PAYSTACK PAYMENT
+    window.payWithPaystack = () => {
+      const handler = PaystackPop.setup({
+        key: "pk_live_725e9c0357625ec847ec27b37e4d1033ac90a718", // 🔁 Replace with your Paystack public key
+        email: currentUser.email,
+        amount: 550000, // ₦5500 in Kobo
+        currency: "NGN",
+        callback: async function (response) {
+          await setDoc(doc(db, "payments", currentUser.uid), {
+            method: "paystack",
+            status: "success",
+            ref: response.reference,
+            timestamp: Date.now()
+          });
+          alert("✅ Paystack Payment Successful!");
+        },
+        onClose: function () {
+          alert("❌ Payment was cancelled.");
+        }
+      });
+      handler.openIframe();
+    };
 
+    // FLUTTERWAVE PAYMENT
+    window.payWithFlutterwave = () => {
+      FlutterwaveCheckout({
+        public_key: "FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxx-X", // 🔁 Replace with your Flutterwave public key
+        tx_ref: "INTELPAY_" + Date.now(),
+        amount: 5500,
+        currency: "NGN",
+        payment_options: "card,ussd,banktransfer",
+        customer: {
+          email: currentUser.email
+        },
+        callback: async function (response) {
+          if (response.status === "successful") {
+            await setDoc(doc(db, "payments", currentUser.uid), {
+              method: "flutterwave",
+              status: "success",
+              ref: response.transaction_id,
+              timestamp: Date.now()
+            });
+            alert("✅ Flutterwave Payment Successful!");
+          } else {
+            alert("❌ Payment failed.");
+          }
+        },
+        onclose: () => alert("❌ Payment closed.")
+      });
+    };
+  </script>
 </body>
 </html>
